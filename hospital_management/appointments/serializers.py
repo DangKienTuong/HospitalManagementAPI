@@ -52,9 +52,15 @@ class LichHenSerializer(serializers.ModelSerializer):
 
 
 class LichHenCreateSerializer(serializers.ModelSerializer):
+    ma_benh_nhan = serializers.PrimaryKeyRelatedField(
+        queryset=BenhNhan.objects.all(),
+        required=False,
+        help_text="ID của bệnh nhân (bắt buộc nếu user là Admin)"
+    )
+    
     class Meta:
         model = LichHen
-        fields = ['ma_bac_si', 'ma_dich_vu', 'ma_lich', 'ghi_chu']
+        fields = ['ma_benh_nhan', 'ma_bac_si', 'ma_dich_vu', 'ma_lich', 'ghi_chu']
     
     def validate(self, attrs):
         # Kiểm tra lịch làm việc còn chỗ trống
@@ -66,16 +72,34 @@ class LichHenCreateSerializer(serializers.ModelSerializer):
         if lich_lam_viec.ma_bac_si != attrs['ma_bac_si']:
             raise serializers.ValidationError("Bác sĩ không khớp với lịch làm việc")
         
+        # Additional validation for Admin users
+        user = self.context['request'].user
+        if user.vai_tro == 'Admin' and 'ma_benh_nhan' in attrs:
+            # Verify that the patient exists
+            try:
+                BenhNhan.objects.get(pk=attrs['ma_benh_nhan'].pk)
+            except (BenhNhan.DoesNotExist, AttributeError):
+                raise serializers.ValidationError("Bệnh nhân không tồn tại")
+        
         return attrs
     
     def create(self, validated_data):
         user = self.context['request'].user
         
-        # Lấy thông tin bệnh nhân từ user hiện tại
-        try:
-            benh_nhan = BenhNhan.objects.get(ma_nguoi_dung=user)
-        except BenhNhan.DoesNotExist:
-            raise serializers.ValidationError("Không tìm thấy thông tin bệnh nhân")
+        # Xác định bệnh nhân cho lịch hẹn
+        if user.vai_tro == 'Admin':
+            # Admin có thể tạo lịch hẹn cho bất kỳ bệnh nhân nào
+            if 'ma_benh_nhan' not in validated_data:
+                raise serializers.ValidationError("Admin phải chỉ định bệnh nhân cho lịch hẹn")
+            benh_nhan = validated_data['ma_benh_nhan']
+            # Remove ma_benh_nhan from validated_data to avoid duplicate field error
+            validated_data.pop('ma_benh_nhan', None)
+        else:
+            # Bệnh nhân chỉ có thể tạo lịch hẹn cho chính mình
+            try:
+                benh_nhan = BenhNhan.objects.get(ma_nguoi_dung=user)
+            except BenhNhan.DoesNotExist:
+                raise serializers.ValidationError("Không tìm thấy thông tin bệnh nhân")
         
         lich_lam_viec = validated_data['ma_lich']
         

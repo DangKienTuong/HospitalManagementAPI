@@ -365,6 +365,17 @@ class LichHenViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
+            # Additional validation for Admin users
+            if request.user.vai_tro == 'Admin':
+                if 'ma_benh_nhan' not in request.data:
+                    return Response(
+                        {
+                            'error': 'Admin users must specify a patient (ma_benh_nhan)',
+                            'details': 'Admin users can create appointments for any patient and must provide ma_benh_nhan field'
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            
             serializer = self.get_serializer(data=request.data)
             if serializer.is_valid():
                 self.perform_create(serializer)
@@ -391,7 +402,7 @@ class LichHenViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Unexpected error creating appointment: {str(e)}")
             return Response(
-                {'error': 'Internal server error'},
+                {'error': 'Internal server error', 'details': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 

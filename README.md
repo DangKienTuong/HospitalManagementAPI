@@ -1,12 +1,13 @@
-# 🏥 Hospital Management System API
+# 🏥 Healthcare Appointment Booking API
 
-A comprehensive RESTful API system for managing hospital operations, built with Django REST Framework. This system provides complete functionality for patient management, medical services, appointment scheduling, payment processing, and administrative operations.
+A comprehensive RESTful API system for managing healthcare appointment scheduling, built with Django REST Framework. This system provides focused functionality for appointment booking, patient management, medical services coordination, and payment processing to streamline the healthcare appointment experience.
 
 ## 📋 Table of Contents
 
 - [Overview](#overview)
 - [Architecture & Design Patterns](#architecture--design-patterns)
 - [Features](#features)
+- [Role-Based Access Control](#role-based-access-control-rbac)
 - [Technology Stack](#technology-stack)
 - [Project Structure](#project-structure)
 - [Installation & Setup](#installation--setup)
@@ -18,14 +19,14 @@ A comprehensive RESTful API system for managing hospital operations, built with 
 
 ## 🔍 Overview
 
-The Hospital Management System API is designed to streamline healthcare operations with a robust, scalable backend solution. The system supports multiple user roles (Admin, Doctor, Patient, Staff) and provides comprehensive functionality for medical appointment management, patient records, payment processing, and administrative tasks.
+The Healthcare Appointment Booking API is designed to streamline the appointment scheduling process for healthcare services with a robust, scalable backend solution. The system focuses specifically on medical appointment management, allowing patients to book consultations with healthcare providers while supporting multiple user roles (Admin, Doctor, Patient, Staff) for efficient appointment coordination and management.
 
 ### Key Capabilities
 - **Multi-role Authentication**: Secure JWT-based authentication system
 - **Patient Management**: Complete patient registration and profile management
 - **Medical Services**: Hospital, specialty, and doctor management
-- **Appointment Scheduling**: Advanced scheduling with availability management
-- **Payment Processing**: Integrated payment and billing system
+- **Appointment Scheduling**: Advanced scheduling with availability management and real-time booking
+- **Payment Processing**: Integrated payment and billing system for appointments
 - **Data Export**: Data export functionality for administrative tasks
 - **API Documentation**: Complete Swagger/OpenAPI documentation
 - **Audit Trail**: Comprehensive logging and audit capabilities
@@ -88,9 +89,10 @@ The project follows **Clean Architecture** principles with clear separation of c
 
 ### 🔐 Authentication & Authorization
 - **JWT Authentication**: Secure token-based authentication
-- **Role-based Access Control**: Admin, Doctor, Patient, Staff roles
-- **Permission System**: Granular permissions for different operations
-- **Session Management**: Access and refresh token handling
+- **Role-based Access Control**: Admin, Doctor, Patient, Staff roles with granular permissions
+- **Permission System**: Comprehensive permission matrix for different operations and data access
+- **Session Management**: Access and refresh token handling with automatic timeout
+- **Multi-layer Security**: API, data, and business logic level authorization enforcement
 
 ### 👥 User Management
 - **Multi-role User System**: Support for different user types
@@ -125,6 +127,179 @@ The project follows **Clean Architecture** principles with clear separation of c
 - **Audit Logging**: Comprehensive activity logging
 - **Error Handling**: Centralized error management
 - **API Versioning**: Version control for API endpoints
+
+## 🔐 Role-Based Access Control (RBAC)
+
+The Healthcare Appointment Booking API implements a comprehensive **Role-Based Access Control (RBAC)** system with four distinct user roles and granular permission management for secure and controlled access to system features.
+
+### 👥 **User Roles & Hierarchy**
+
+| Role | Level | Description | Access Level |
+|------|-------|-------------|--------------|
+| **🔴 ADMIN** | 1 | System administrator with full access | Full System Access |
+| **🟡 DOCTOR** | 2 | Healthcare provider with clinical access | Clinical & Patient Management |
+| **🟢 STAFF** | 3 | Administrative and support staff | Operational & Support |
+| **🔵 PATIENT** | 4 | End-user patients | Self-Service & Booking |
+
+### 📊 **Detailed Permission Matrix**
+
+#### **🔴 ADMIN Role - Full System Access**
+**Account Management:**
+- ✅ **User Management**: Create, read, update, delete all user accounts
+- ✅ **Role Assignment**: Assign and modify user roles and permissions
+- ✅ **System Configuration**: Access to all system settings and configurations
+- ✅ **Audit Logs**: View and manage all system activity logs
+
+**Healthcare Operations:**
+- ✅ **Medical Services**: Full CRUD operations on all medical services
+- ✅ **Doctor Management**: Manage doctor profiles, specializations, and schedules
+- ✅ **Facility Management**: Create and manage healthcare facilities
+- ✅ **Specialty Management**: Manage medical specialties and categories
+
+**Appointment System:**
+- ✅ **Appointment Management**: View, create, modify, and cancel all appointments
+- ✅ **Schedule Management**: Manage doctor schedules and availability
+- ✅ **Booking Rules**: Configure appointment booking rules and policies
+- ✅ **Override Permissions**: Override booking restrictions and policies
+
+**Financial & Reporting:**
+- ✅ **Payment Management**: Full access to payment processing and billing
+- ✅ **Financial Reports**: Access to all financial and operational reports
+- ✅ **Data Export**: Export all system data for analysis
+- ✅ **System Analytics**: Access to comprehensive system analytics
+
+#### **🟡 DOCTOR Role - Clinical & Patient Management**
+**Patient Care:**
+- ✅ **Patient Records**: View and update patient medical information
+- ✅ **Appointment Management**: View and manage own appointments
+- ✅ **Schedule Management**: Manage personal availability and working hours
+- ✅ **Patient Communication**: Send messages and updates to patients
+
+**Medical Services:**
+- ✅ **Service Provision**: Provide and document medical services
+- ✅ **Treatment Plans**: Create and manage patient treatment plans
+- ✅ **Medical Notes**: Add and update patient medical notes
+- ✅ **Prescription Management**: Manage patient prescriptions
+
+**Appointment Operations:**
+- ✅ **Own Appointments**: Full access to personal appointment schedule
+- ✅ **Patient Booking**: Accept or decline appointment requests
+- ✅ **Rescheduling**: Modify appointment times within constraints
+- ✅ **Status Updates**: Update appointment status and notes
+
+**Limited Access:**
+- ❌ **User Management**: Cannot create or modify user accounts
+- ❌ **System Configuration**: No access to system settings
+- ❌ **Financial Reports**: Limited access to financial information
+- ❌ **Other Doctors**: Cannot access other doctors' schedules
+
+#### **🟢 STAFF Role - Operational & Support**
+**Appointment Support:**
+- ✅ **Appointment Booking**: Create and manage appointments for patients
+- ✅ **Schedule Viewing**: View doctor schedules and availability
+- ✅ **Patient Support**: Assist patients with booking and inquiries
+- ✅ **Appointment Modifications**: Modify appointment details as needed
+
+**Patient Management:**
+- ✅ **Patient Registration**: Register new patients in the system
+- ✅ **Patient Updates**: Update basic patient information
+- ✅ **Patient Search**: Search and view patient records
+- ✅ **Contact Management**: Manage patient contact information
+
+**Operational Tasks:**
+- ✅ **Basic Reporting**: Access to operational reports
+- ✅ **Data Entry**: Enter and update basic system data
+- ✅ **Customer Service**: Handle patient inquiries and support
+- ✅ **Appointment Coordination**: Coordinate between patients and doctors
+
+**Restricted Access:**
+- ❌ **Medical Records**: Cannot view detailed medical information
+- ❌ **Treatment Plans**: No access to medical treatment details
+- ❌ **System Administration**: Cannot modify system settings
+- ❌ **Financial Operations**: Limited access to financial data
+
+#### **🔵 PATIENT Role - Self-Service & Booking**
+**Personal Management:**
+- ✅ **Profile Management**: View and update personal information
+- ✅ **Medical History**: View own medical history and records
+- ✅ **Appointment History**: View past and upcoming appointments
+- ✅ **Personal Documents**: Access personal medical documents
+
+**Appointment Services:**
+- ✅ **Appointment Booking**: Book appointments with available doctors
+- ✅ **Appointment Cancellation**: Cancel own appointments (within policy)
+- ✅ **Rescheduling**: Request appointment time changes
+- ✅ **Availability Viewing**: View doctor availability and schedules
+
+**Communication:**
+- ✅ **Message Reception**: Receive messages from healthcare providers
+- ✅ **Notification Preferences**: Manage notification settings
+- ✅ **Feedback Submission**: Submit feedback and ratings
+- ✅ **Support Requests**: Request customer support assistance
+
+**Access Limitations:**
+- ❌ **Other Patients**: Cannot view other patients' information
+- ❌ **Doctor Schedules**: Limited view of doctor availability
+- ❌ **System Administration**: No administrative access
+- ❌ **Financial Management**: Cannot access payment processing
+
+### 🛡️ **Security Implementation**
+
+#### **Authentication Layers**
+1. **JWT Token Authentication**: Secure token-based authentication
+2. **Role Verification**: Automatic role validation on each request
+3. **Permission Checking**: Granular permission validation at API level
+4. **Session Management**: Secure session handling with automatic timeout
+
+#### **Authorization Enforcement**
+- **API Level**: All endpoints validate user roles and permissions
+- **Data Level**: Database queries filter data based on user role
+- **UI Level**: Interface elements dynamically render based on permissions
+- **Business Logic**: Service layer enforces role-based business rules
+
+#### **Access Control Examples**
+
+**Doctor Schedule Access:**
+```python
+# Only doctors can modify their own schedules
+if user.role == 'DOCTOR' and schedule.doctor_id != user.id:
+    raise PermissionDenied("Can only modify own schedule")
+
+# Staff can view but not modify doctor schedules
+if user.role == 'STAFF' and request.method in ['PUT', 'DELETE']:
+    raise PermissionDenied("Staff cannot modify doctor schedules")
+```
+
+**Patient Data Access:**
+```python
+# Patients can only access their own data
+if user.role == 'PATIENT' and patient_id != user.patient_id:
+    raise PermissionDenied("Can only access own patient data")
+
+# Doctors can access their patients' data
+if user.role == 'DOCTOR' and not is_my_patient(doctor_id, patient_id):
+    raise PermissionDenied("Can only access own patients' data")
+```
+
+### 🔄 **Role Transition & Management**
+
+#### **Role Assignment Process**
+1. **Initial Registration**: Users are assigned default roles based on registration type
+2. **Role Upgrade**: Roles can be upgraded by administrators only
+3. **Role Downgrade**: Role changes require administrative approval
+4. **Temporary Roles**: Special access can be granted temporarily
+
+#### **Permission Inheritance**
+- **Higher roles inherit lower role permissions**
+- **Role-specific permissions are additive**
+- **Administrative overrides can grant temporary access**
+- **Emergency access protocols for critical situations**
+
+#### **Audit & Compliance**
+- **All role changes are logged with administrator details**
+- **Permission access is tracked for compliance reporting**
+- **Regular access reviews are conducted**
+- **Automated alerts for unusual access patterns**
 
 ## 🛠️ Technology Stack
 
