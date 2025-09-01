@@ -1,331 +1,712 @@
-# Hệ thống Quản lý Đặt lịch Khám bệnh - Hospital Management API
+# 🏥 Hospital Management System API
 
-## Tổng quan
+A comprehensive RESTful API system for managing hospital operations, built with Django REST Framework. This system provides complete functionality for patient management, medical services, appointment scheduling, payment processing, and administrative operations.
 
-Hệ thống Web API backend được xây dựng bằng Django REST Framework để quản lý việc đặt lịch khám bệnh và tư vấn từ xa. Hệ thống hỗ trợ đầy đủ các chức năng từ quản lý người dùng, cơ sở y tế, bác sĩ, dịch vụ khám, lịch hẹn, thanh toán đến tư vấn từ xa.
+## 📋 Table of Contents
 
-## Công nghệ sử dụng
+- [Overview](#overview)
+- [Architecture & Design Patterns](#architecture--design-patterns)
+- [Features](#features)
+- [Technology Stack](#technology-stack)
+- [Project Structure](#project-structure)
+- [Installation & Setup](#installation--setup)
+- [Database Configuration](#database-configuration)
+- [API Documentation](#api-documentation)
+- [Core Modules](#core-modules)
+- [Authentication & Authorization](#authentication--authorization)
+- [Usage Examples](#usage-examples)
 
-- **Backend Framework**: Django 4.2.7 + Django REST Framework 3.14.0
-- **Database**: Microsoft SQL Server
-- **Authentication**: JWT (JSON Web Token)
-- **File Processing**: pandas, openpyxl
-- **Report Generation**: reportlab (PDF)
-- **Others**: django-cors-headers, python-decouple
+## 🔍 Overview
 
-## Cấu trúc dự án
+The Hospital Management System API is designed to streamline healthcare operations with a robust, scalable backend solution. The system supports multiple user roles (Admin, Doctor, Patient, Staff) and provides comprehensive functionality for medical appointment management, patient records, payment processing, and administrative tasks.
+
+### Key Capabilities
+- **Multi-role Authentication**: Secure JWT-based authentication system
+- **Patient Management**: Complete patient registration and profile management
+- **Medical Services**: Hospital, specialty, and doctor management
+- **Appointment Scheduling**: Advanced scheduling with availability management
+- **Payment Processing**: Integrated payment and billing system
+- **Import/Export**: Data import/export functionality for administrative tasks
+- **API Documentation**: Complete Swagger/OpenAPI documentation
+- **Audit Trail**: Comprehensive logging and audit capabilities
+
+## 🏗️ Architecture & Design Patterns
+
+### Clean Architecture
+The project follows **Clean Architecture** principles with clear separation of concerns:
+
+```
+├── Core Layer (Business Logic)
+│   ├── Models (Domain Entities)
+│   ├── Services (Business Rules)
+│   ├── Repositories (Data Access Abstraction)
+│   └── Unit of Work Pattern
+├── Application Layer (Use Cases)
+│   ├── API Views
+│   ├── Serializers
+│   └── URL Routing
+├── Infrastructure Layer
+│   ├── Database (SQL Server)
+│   ├── Authentication (JWT)
+│   └── External Services
+└── Presentation Layer
+    └── REST API Endpoints
+```
+
+### Design Patterns Implemented
+
+#### 1. **Repository Pattern**
+- `BaseRepository`: Abstract base for all repository implementations
+- Specific repositories: `UserRepository`, `MedicalRepository`, `AppointmentRepository`, `PaymentRepository`
+- Provides consistent data access layer abstraction
+
+#### 2. **Unit of Work Pattern**
+- Manages transactions across multiple repositories
+- Ensures data consistency and ACID properties
+- Located in `core/unit_of_work.py`
+
+#### 3. **Dependency Injection**
+- Custom IoC container implementation (`core/dependency_injection.py`)
+- Service registration and resolution
+- Singleton and transient service lifetimes
+- Circular dependency detection
+
+#### 4. **Service Layer Pattern**
+- Business logic separation from views
+- `BaseService` and specialized service classes
+- Validation and business rule enforcement
+
+#### 5. **Decorator Pattern**
+- Custom middleware for logging, authentication, and error handling
+- API documentation decorators using drf-spectacular
+
+#### 6. **Observer Pattern**
+- Custom logging system with configurable handlers
+- Health check monitoring system
+
+## ✨ Features
+
+### 🔐 Authentication & Authorization
+- **JWT Authentication**: Secure token-based authentication
+- **Role-based Access Control**: Admin, Doctor, Patient, Staff roles
+- **Permission System**: Granular permissions for different operations
+- **Session Management**: Access and refresh token handling
+
+### 👥 User Management
+- **Multi-role User System**: Support for different user types
+- **Patient Registration**: Complete patient profile management
+- **Doctor Profiles**: Doctor specialization and experience tracking
+- **User Authentication**: Phone number-based authentication
+
+### 🏥 Medical Services Management
+- **Healthcare Facilities**: Hospital and clinic management
+- **Medical Specialties**: Specialty categorization and management
+- **Doctor Management**: Doctor profiles with specializations
+- **Service Catalog**: Medical services with pricing and duration
+
+### 📅 Appointment System
+- **Schedule Management**: Doctor availability and working hours
+- **Appointment Booking**: Patient appointment scheduling
+- **Status Tracking**: Appointment status management (Pending, Confirmed, Completed, Cancelled)
+- **Telemedicine Support**: Remote consultation sessions
+
+### 💰 Payment Management
+- **Billing System**: Service-based billing and payment tracking
+- **Payment Processing**: Multiple payment method support
+- **Financial Reporting**: Payment history and analytics
+
+### 📊 Data Management
+- **Import/Export**: Excel-based data import/export functionality
+- **Reporting**: Comprehensive reporting system
+- **Data Validation**: Robust input validation and sanitization
+
+### 🔧 Administrative Features
+- **Health Monitoring**: System health checks and monitoring
+- **Audit Logging**: Comprehensive activity logging
+- **Error Handling**: Centralized error management
+- **API Versioning**: Version control for API endpoints
+
+## 🛠️ Technology Stack
+
+### Backend Framework
+- **Django 4.2.7**: Web framework
+- **Django REST Framework 3.16+**: API development
+- **djangorestframework-simplejwt 5.5+**: JWT authentication
+
+### Database
+- **SQL Server**: Primary database with `mssql-django` connector
+- **ODBC Driver 17**: SQL Server connectivity
+
+### API Documentation
+- **drf-spectacular 0.27+**: OpenAPI 3.0 schema generation
+- **Swagger UI**: Interactive API documentation
+- **ReDoc**: Alternative API documentation interface
+
+### Additional Libraries
+- **django-cors-headers**: CORS handling
+- **django-filter**: Advanced filtering
+- **Pillow**: Image processing
+- **openpyxl**: Excel file processing
+- **pandas**: Data manipulation
+- **reportlab**: PDF generation
+- **python-dateutil**: Date/time utilities
+
+## 📁 Project Structure
 
 ```
 HospitalManagementAPI/
-├── database/
-│   ├── init_database.sql              # Script SQL khởi tạo CSDL gốc
-│   └── init_database_updated.sql      # Script SQL với tên bảng không dấu
-├── hospital_management/
-│   ├── authentication/                # App xác thực và phân quyền
-│   ├── users/                         # App quản lý bệnh nhân
-│   ├── medical/                       # App quản lý cơ sở y tế, bác sĩ, dịch vụ
-│   ├── appointments/                  # App quản lý lịch hẹn, tư vấn từ xa
-│   ├── payments/                      # App quản lý thanh toán
-│   ├── utils/                         # Utilities nhập/xuất dữ liệu
-│   └── hospital_management/           # Settings và URL configuration
-├── requirements.txt                   # Dependencies
-└── README.md                         # Tài liệu này
+├── hospital_management/           # Main Django project
+│   ├── hospital_management/       # Project settings
+│   │   ├── settings.py            # Django configuration
+│   │   ├── urls.py                # Main URL routing
+│   │   └── wsgi.py                # WSGI application
+│   │
+│   ├── authentication/            # Authentication module
+│   │   ├── models.py              # User model (NguoiDung)
+│   │   ├── views.py               # Auth API endpoints
+│   │   ├── serializers.py         # Auth serializers
+│   │   ├── permissions.py         # Custom permissions
+│   │   └── urls.py                # Auth URL routing
+│   │
+│   ├── users/                     # User management module
+│   │   ├── models.py              # Patient model (BenhNhan)
+│   │   ├── views.py               # User API endpoints
+│   │   ├── serializers.py         # User serializers
+│   │   └── urls.py                # User URL routing
+│   │
+│   ├── medical/                   # Medical services module
+│   │   ├── models.py              # Medical entities (CoSoYTe, BacSi, DichVu, ChuyenKhoa)
+│   │   ├── views.py               # Medical API endpoints
+│   │   ├── serializers.py         # Medical serializers
+│   │   └── urls.py                # Medical URL routing
+│   │
+│   ├── appointments/              # Appointment management
+│   │   ├── models.py              # Appointment models (LichHen, LichLamViec)
+│   │   ├── views.py               # Appointment API endpoints
+│   │   ├── serializers.py         # Appointment serializers
+│   │   └── urls.py                # Appointment URL routing
+│   │
+│   ├── payments/                  # Payment processing
+│   │   ├── models.py              # Payment models
+│   │   ├── views.py               # Payment API endpoints
+│   │   ├── serializers.py         # Payment serializers
+│   │   └── urls.py                # Payment URL routing
+│   │
+│   ├── utils/                     # Utility functions
+│   │   ├── views.py               # Import/Export endpoints
+│   │   └── urls.py                # Utility URL routing
+│   │
+│   └── core/                      # Core infrastructure
+│       ├── repositories/          # Repository pattern implementation
+│       │   ├── base.py            # Base repository
+│       │   ├── user_repository.py # User data access
+│       │   ├── medical_repository.py # Medical data access
+│       │   ├── appointment_repository.py # Appointment data access
+│       │   └── payment_repository.py # Payment data access
+│       ├── services/              # Service layer
+│       │   ├── base.py            # Base service
+│       │   └── user_service.py    # User business logic
+│       ├── dependency_injection.py # IoC container
+│       ├── unit_of_work.py        # Unit of Work pattern
+│       ├── models.py              # Base models and mixins
+│       ├── exceptions.py          # Custom exceptions
+│       ├── validators.py          # Input validation
+│       ├── middleware.py          # Custom middleware
+│       ├── pagination.py          # Custom pagination
+│       ├── logging_config.py      # Logging configuration
+│       ├── health_checks.py       # Health monitoring
+│       └── views.py               # Core API views
+│
+├── database/                      # Database setup
+│   ├── database_setup.sql         # Database schema
+│   ├── create_test_users.sql      # Test data
+│   └── set_passwords.py           # Password management
+│
+├── static/                        # Static files
+├── requirements.txt               # Python dependencies
+└── README.md                      # Project documentation
 ```
 
-## Cài đặt và chạy dự án
+## 🚀 Installation & Setup
 
-### 1. Yêu cầu hệ thống
-
+### Prerequisites
 - Python 3.8+
-- Microsoft SQL Server
+- SQL Server 2019+ or SQL Server Express
+- ODBC Driver 17 for SQL Server
 - pip (Python package manager)
 
-### 2. Cài đặt dependencies
+### Step-by-Step Setup
 
+#### 1. Clone the Repository
+```bash
+git clone <repository-url>
+cd HospitalManagementAPI
+```
+
+#### 2. Create Virtual Environment
+```bash
+# Create virtual environment
+python -m venv .venv
+
+# Activate virtual environment
+# On Windows:
+.venv\Scripts\activate
+# On macOS/Linux:
+source .venv/bin/activate
+```
+
+#### 3. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Cấu hình database
-
-1. Tạo database SQL Server:
-   - Chạy script `database/init_database_updated.sql` để tạo database và dữ liệu mẫu
-   - Database name: `He_thong_Dat_lich_kham_benh`
-
-2. Cập nhật cấu hình database trong `hospital_management/settings.py`:
-   ```python
-   DATABASES = {
-       'default': {
-           'ENGINE': 'mssql',
-           'NAME': 'He_thong_Dat_lich_kham_benh',
-           'USER': 'your_username',
-           'PASSWORD': 'your_password',
-           'HOST': 'localhost',
-           'PORT': '1433',
-           'OPTIONS': {
-               'driver': 'ODBC Driver 17 for SQL Server',
-               'unicode_results': True,
-               'extra_params': 'MARS_Connection=Yes'
-           },
-       }
-   }
-   ```
-
-### 4. Chạy migration
-
+#### 4. Install ODBC Driver (Windows)
 ```bash
-cd hospital_management
-python manage.py makemigrations
-python manage.py migrate
+# Download and install ODBC Driver 17 for SQL Server
+# https://docs.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server
 ```
 
-### 5. Tạo superuser
-
+#### 5. Configure SQL Server & Create Database
 ```bash
+# Start SQL Server service
+# Configure authentication (SQL Server + Windows Authentication)
+
+# Create database and tables using the prepared SQL script
+# Run database/database_setup.sql in SQL Server Management Studio or sqlcmd
+# This script will create the database 'He_thong_Dat_lich_kham_benh' and all necessary tables
+
+# Optional: Load test data using the prepared script
+# Run database/create_test_users.sql in SQL Server Management Studio or sqlcmd
+# This script will insert sample users and test data for development
+```
+
+#### 6. Environment Configuration
+Create a `.env` file in the project root:
+```env
+SECRET_KEY=your-secret-key-here
+DEBUG=True
+DB_NAME=He_thong_Dat_lich_kham_benh
+DB_USER=sa
+DB_PASSWORD=your-password
+DB_HOST=localhost
+DB_PORT=1433
+JWT_ALGORITHM=HS256
+```
+
+#### 7. Database Setup
+```bash
+# Navigate to project directory
+cd hospital_management
+
+# Run database migrations
+python manage.py makemigrations
+python manage.py migrate
+
+# Create superuser
 python manage.py createsuperuser
 ```
 
-### 6. Chạy server
+#### 8. Load Test Data (Optional)
+```bash
+# Run test data script
+python database/set_passwords.py
 
+```
+
+#### 9. Run Development Server
 ```bash
 python manage.py runserver
 ```
 
-API sẽ chạy tại: `http://localhost:8000/`
-
-## API Endpoints
-
-### Authentication (Xác thực)
-
-| Method | Endpoint | Mô tả |
-|--------|----------|-------|
-| POST | `/api/auth/register/` | Đăng ký tài khoản |
-| POST | `/api/auth/login/` | Đăng nhập |
-| POST | `/api/auth/refresh/` | Refresh token |
-| GET | `/api/auth/profile/` | Xem profile |
-| POST | `/api/auth/change-password/` | Đổi mật khẩu |
-| GET | `/api/auth/permissions/` | Kiểm tra quyền |
-
-### Users (Người dùng)
-
-| Method | Endpoint | Mô tả |
-|--------|----------|-------|
-| GET | `/api/users/benh-nhan/` | Danh sách bệnh nhân |
-| POST | `/api/users/benh-nhan/` | Tạo bệnh nhân mới |
-| GET | `/api/users/benh-nhan/{id}/` | Chi tiết bệnh nhân |
-| PUT/PATCH | `/api/users/benh-nhan/{id}/` | Cập nhật bệnh nhân |
-| GET | `/api/users/benh-nhan/profile/` | Profile bệnh nhân hiện tại |
-| GET | `/api/users/benh-nhan/{id}/lich-su-kham/` | Lịch sử khám |
-
-### Medical (Y tế)
-
-| Method | Endpoint | Mô tả |
-|--------|----------|-------|
-| GET | `/api/medical/co-so-y-te/` | Danh sách cơ sở y tế |
-| GET | `/api/medical/chuyen-khoa/` | Danh sách chuyên khoa |
-| GET | `/api/medical/bac-si/` | Danh sách bác sĩ |
-| GET | `/api/medical/dich-vu/` | Danh sách dịch vụ |
-| GET | `/api/medical/bac-si/profile/` | Profile bác sĩ hiện tại |
-| GET | `/api/medical/dich-vu/tu-van-tu-xa/` | Dịch vụ tư vấn từ xa |
-
-### Appointments (Lịch hẹn)
-
-| Method | Endpoint | Mô tả |
-|--------|----------|-------|
-| GET | `/api/appointments/lich-lam-viec/` | Lịch làm việc bác sĩ |
-| POST | `/api/appointments/lich-lam-viec/` | Tạo lịch làm việc |
-| GET | `/api/appointments/lich-hen/` | Danh sách lịch hẹn |
-| POST | `/api/appointments/lich-hen/` | Đặt lịch hẹn |
-| PATCH | `/api/appointments/lich-hen/{id}/update-status/` | Cập nhật trạng thái |
-| POST | `/api/appointments/lich-hen/{id}/cancel/` | Hủy lịch hẹn |
-| GET | `/api/appointments/phien-tu-van/` | Phiên tư vấn từ xa |
-| POST | `/api/appointments/phien-tu-van/{id}/start-session/` | Bắt đầu tư vấn |
-| POST | `/api/appointments/phien-tu-van/{id}/end-session/` | Kết thúc tư vấn |
-
-### Payments (Thanh toán)
-
-| Method | Endpoint | Mô tả |
-|--------|----------|-------|
-| GET | `/api/payments/thanh-toan/` | Danh sách thanh toán |
-| POST | `/api/payments/thanh-toan/` | Tạo thanh toán |
-| PATCH | `/api/payments/thanh-toan/{id}/update-status/` | Cập nhật trạng thái |
-| POST | `/api/payments/thanh-toan/{id}/process-payment/` | Xử lý thanh toán |
-| GET | `/api/payments/thanh-toan/statistics/` | Thống kê thanh toán |
-
-### Utils (Tiện ích)
-
-| Method | Endpoint | Mô tả |
-|--------|----------|-------|
-| POST | `/api/utils/import/benh-nhan/` | Nhập dữ liệu bệnh nhân |
-| POST | `/api/utils/import/co-so-y-te/` | Nhập dữ liệu cơ sở y tế |
-| POST | `/api/utils/import/bac-si/` | Nhập dữ liệu bác sĩ |
-| POST | `/api/utils/import/dich-vu/` | Nhập dữ liệu dịch vụ |
-| GET | `/api/utils/export/benh-nhan/` | Xuất danh sách bệnh nhân |
-| GET | `/api/utils/export/lich-hen/` | Xuất báo cáo lịch hẹn |
-| GET | `/api/utils/export/thong-ke/` | Xuất báo cáo thống kê |
-
-## Phân quyền người dùng
-
-### Vai trò trong hệ thống:
-
-1. **Quản trị viên (Admin)**: Toàn quyền quản lý hệ thống
-2. **Bác sĩ**: Quản lý lịch làm việc, xác nhận lịch hẹn, tư vấn từ xa
-3. **Bệnh nhân**: Đặt lịch hẹn, xem lịch sử khám, thanh toán
-4. **Nhân viên y tế**: Hỗ trợ quản lý thông tin bệnh nhân và lịch hẹn
-
-### Quyền truy cập:
-
-- **Anonymous**: Xem danh sách cơ sở y tế, chuyên khoa, bác sĩ, dịch vụ
-- **Authenticated**: Truy cập thông tin cá nhân, đặt lịch hẹn
-- **Role-based**: Phân quyền theo vai trò cụ thể
-
-## Mô hình dữ liệu
-
-### 10 bảng chính:
-
-1. **Nguoi_dung**: Tài khoản người dùng
-2. **Benh_nhan**: Thông tin bệnh nhân
-3. **Co_so_y_te**: Cơ sở y tế
-4. **Chuyen_khoa**: Chuyên khoa
-5. **Bac_si**: Thông tin bác sĩ
-6. **Dich_vu**: Dịch vụ khám bệnh
-7. **Lich_lam_viec**: Lịch làm việc bác sĩ
-8. **Lich_hen**: Lịch hẹn khám bệnh
-9. **Thanh_toan**: Thanh toán
-10. **Phien_tu_van_tu_xa**: Phiên tư vấn từ xa
-
-## Tính năng chính
-
-### 1. Quản lý người dùng
-- Đăng ký/đăng nhập với JWT
-- Phân quyền theo vai trò
-- Quản lý profile cá nhân
-
-### 2. Quản lý cơ sở y tế
-- CRUD cơ sở y tế, chuyên khoa
-- Quản lý bác sĩ và dịch vụ
-- Tìm kiếm và lọc dữ liệu
-
-### 3. Đặt lịch khám bệnh
-- Xem lịch làm việc bác sĩ
-- Đặt lịch hẹn online
-- Quản lý trạng thái lịch hẹn
-- Hủy lịch hẹn
-
-### 4. Tư vấn từ xa
-- Tạo phiên tư vấn online
-- Quản lý cuộc gọi video
-- Lưu ghi chú tư vấn
-
-### 5. Thanh toán
-- Đa dạng phương thức thanh toán
-- Theo dõi trạng thái thanh toán
-- Thống kê doanh thu
-
-### 6. Nhập/xuất dữ liệu
-- Import từ file CSV/Excel
-- Export báo cáo Excel/PDF
-- Thống kê và báo cáo
-
-## Sử dụng API
-
-### 1. Authentication
-
+#### 10. Verify Installation
 ```bash
-# Đăng nhập
-curl -X POST http://localhost:8000/api/auth/login/ \
-  -H "Content-Type: application/json" \
-  -d '{"so_dien_thoai": "0912345678", "mat_khau": "password123"}'
+# Test server is running
+curl http://localhost:8000/api/docs/
 
-# Response
+# Access Swagger UI
+# Open browser: http://localhost:8000/api/docs/
+```
+
+## 🗄️ Database Configuration
+
+### Database Schema Overview
+
+The system uses SQL Server with Vietnamese field names following the original database design:
+
+#### Core Tables
+- **Nguoi_dung**: User authentication and roles
+- **Benh_nhan**: Patient information
+- **Co_so_y_te**: Healthcare facilities
+- **Chuyen_khoa**: Medical specialties
+- **Bac_si**: Doctor profiles
+- **Dich_vu**: Medical services
+- **Lich_lam_viec**: Doctor schedules
+- **Lich_hen**: Appointments
+- **Phien_tu_van_tu_xa**: Telemedicine sessions
+
+#### Database Connection Settings
+```python
+DATABASES = {
+    'default': {
+        'ENGINE': 'mssql',
+        'NAME': 'He_thong_Dat_lich_kham_benh',
+        'USER': 'sa',
+        'PASSWORD': '123',
+        'HOST': 'localhost',
+        'PORT': '1433',
+        'OPTIONS': {
+            'driver': 'ODBC Driver 17 for SQL Server',
+            'unicode_results': True,
+            'extra_params': 'MARS_Connection=Yes'
+        },
+    }
+}
+```
+
+### Entity Relationships
+```
+NguoiDung (Users)
+├── BenhNhan (Patients) [1:1]
+└── BacSi (Doctors) [1:1]
+    └── ChuyenKhoa (Specialties) [N:1]
+        └── CoSoYTe (Facilities) [N:1]
+
+LichHen (Appointments)
+├── BenhNhan [N:1]
+├── BacSi [N:1]
+├── DichVu (Services) [N:1]
+└── LichLamViec (Schedules) [N:1]
+```
+
+## 📚 API Documentation
+
+### Interactive Documentation
+- **Swagger UI**: `http://localhost:8000/api/docs/`
+- **ReDoc**: `http://localhost:8000/api/redoc/`
+- **OpenAPI Schema**: `http://localhost:8000/api/schema/`
+
+### Authentication Endpoints
+```
+POST /api/auth/login/          # User login
+POST /api/auth/register/       # User registration
+POST /api/auth/refresh/        # Refresh JWT token
+POST /api/auth/verify/         # Verify JWT token
+PUT  /api/auth/change-password/ # Change password
+```
+
+### User Management Endpoints
+```
+GET    /api/users/profile/     # Get user profile
+PUT    /api/users/profile/     # Update user profile
+GET    /api/users/patients/    # List patients (Admin only)
+POST   /api/users/patients/    # Create patient
+```
+
+### Medical Services Endpoints
+```
+GET    /api/medical/facilities/    # List healthcare facilities
+POST   /api/medical/facilities/    # Create facility (Admin)
+GET    /api/medical/specialties/   # List specialties
+GET    /api/medical/doctors/       # List doctors
+GET    /api/medical/services/      # List medical services
+```
+
+### Appointment Endpoints
+```
+GET    /api/appointments/         # List appointments
+POST   /api/appointments/         # Create appointment
+PUT    /api/appointments/{id}/    # Update appointment
+DELETE /api/appointments/{id}/    # Cancel appointment
+GET    /api/appointments/schedule/ # Get doctor schedules
+```
+
+### Payment Endpoints
+```
+GET    /api/payments/            # List payments
+POST   /api/payments/            # Process payment
+GET    /api/payments/{id}/       # Get payment details
+```
+
+### Utility Endpoints
+```
+POST   /api/utils/import/benh-nhan/    # Import patients from Excel
+POST   /api/utils/import/bac-si/       # Import doctors from Excel
+GET    /api/utils/export/lich-hen/     # Export appointments to Excel
+GET    /api/utils/export/thong-ke/     # Export statistics
+```
+
+## 🔧 Core Modules
+
+### Authentication Module
+**Purpose**: Handles user authentication, authorization, and session management.
+
+**Key Components**:
+- **NguoiDung Model**: Custom user model with phone number authentication
+- **JWT Authentication**: Token-based authentication with refresh capabilities
+- **Role-based Permissions**: Admin, Doctor, Patient, Staff roles
+- **Custom Serializers**: Registration, login, and password change serializers
+
+**Key Features**:
+- Phone number as username
+- Vietnamese role names
+- Password validation
+- Token blacklisting
+- Permission-based access control
+
+### Users Module
+**Purpose**: Manages patient profiles and user-related operations.
+
+**Key Components**:
+- **BenhNhan Model**: Patient information storage
+- **Profile Management**: Complete patient profile CRUD operations
+- **User Relationships**: Links users to patient records
+
+**Key Features**:
+- Patient registration and profile management
+- Health insurance number tracking
+- Contact information management
+- Gender and demographic data
+
+### Medical Module
+**Purpose**: Manages healthcare facilities, doctors, specialties, and services.
+
+**Key Components**:
+- **CoSoYTe Model**: Healthcare facility management
+- **ChuyenKhoa Model**: Medical specialty categorization
+- **BacSi Model**: Doctor profile and specialization
+- **DichVu Model**: Medical service catalog
+
+**Key Features**:
+- Multi-facility support
+- Doctor specialization tracking
+- Service pricing and duration
+- Facility type categorization
+
+### Appointments Module
+**Purpose**: Handles appointment scheduling, doctor availability, and session management.
+
+**Key Components**:
+- **LichLamViec Model**: Doctor working schedules
+- **LichHen Model**: Appointment booking and tracking
+- **PhienTuVanTuXa Model**: Telemedicine session management
+
+**Key Features**:
+- Advanced scheduling system
+- Availability management
+- Appointment status tracking
+- Telemedicine support
+- Queue management
+
+### Payments Module
+**Purpose**: Manages billing, payment processing, and financial transactions.
+
+**Key Components**:
+- **Payment Models**: Transaction and billing management
+- **Payment Processing**: Multiple payment method support
+- **Financial Reporting**: Payment analytics and reporting
+
+**Key Features**:
+- Service-based billing
+- Payment status tracking
+- Financial reporting
+- Transaction history
+
+### Utils Module
+**Purpose**: Provides utility functions for data import/export and administrative tasks.
+
+**Key Components**:
+- **Import Views**: Excel-based data import functionality
+- **Export Views**: Data export to various formats
+- **Administrative Tools**: Bulk operations and data management
+
+**Key Features**:
+- Excel import/export
+- Bulk data operations
+- Statistical reporting
+- Data validation and cleansing
+
+### Core Module
+**Purpose**: Provides infrastructure components and shared functionality.
+
+**Key Components**:
+- **Repository Pattern**: Data access abstraction
+- **Service Layer**: Business logic implementation
+- **Dependency Injection**: IoC container for service management
+- **Unit of Work**: Transaction management
+- **Middleware**: Cross-cutting concerns
+- **Validators**: Input validation and business rules
+
+**Key Features**:
+- Clean architecture implementation
+- Centralized error handling
+- Logging and monitoring
+- Health checks
+- API versioning
+- Custom pagination
+
+## 🔐 Authentication & Authorization
+
+### JWT Authentication Flow
+```python
+# Login Process
+1. User submits phone number + password
+2. System validates credentials
+3. JWT access + refresh tokens generated
+4. Tokens returned to client
+5. Client includes Bearer token in subsequent requests
+
+# Token Structure
 {
   "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
   "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
   "user": {
     "ma_nguoi_dung": 1,
-    "so_dien_thoai": "0912345678",
-    "vai_tro": "Benh nhan"
+    "so_dien_thoai": "0123456789",
+    "vai_tro": "Bệnh nhân",
+    "trang_thai": true
   }
 }
 ```
 
-### 2. Sử dụng token
+### Role-based Access Control
+```python
+# User Roles
+VAI_TRO_CHOICES = [
+    ('Admin', 'Quản trị viên'),      # System Administrator
+    ('Bác sĩ', 'Bác sĩ'),           # Doctor
+    ('Bệnh nhân', 'Bệnh nhân'),     # Patient
+    ('Nhân viên', 'Nhân viên y tế'), # Medical Staff
+]
 
-```bash
-# Gọi API với token
-curl -X GET http://localhost:8000/api/medical/bac-si/ \
-  -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+# Permission Matrix
+- Admin: Full system access
+- Doctor: Patient records, appointments, medical data
+- Patient: Own profile, appointments, medical history
+- Staff: Limited administrative functions
 ```
 
-### 3. Đặt lịch hẹn
+### Security Headers
+```python
+# JWT Configuration
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'ALGORITHM': 'HS256',
+}
 
-```bash
-curl -X POST http://localhost:8000/api/appointments/lich-hen/ \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
+# CORS Configuration
+CORS_ALLOW_ALL_ORIGINS = True  # Development only
+CORS_ALLOW_CREDENTIALS = True
+```
+
+## 💻 Usage Examples
+
+### 1. User Registration and Login
+```python
+# Register new patient
+POST /api/auth/register/
+{
+    "so_dien_thoai": "0123456789",
+    "password": "securepassword123",
+    "vai_tro": "Bệnh nhân"
+}
+
+# Login
+POST /api/auth/login/
+{
+    "so_dien_thoai": "0123456789",
+    "password": "securepassword123"
+}
+
+# Response
+{
+    "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+    "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+    "user": {
+        "ma_nguoi_dung": 1,
+        "so_dien_thoai": "0123456789",
+        "vai_tro": "Bệnh nhân"
+    }
+}
+```
+
+### 2. Create Patient Profile
+```python
+# Create patient profile
+POST /api/users/patients/
+Authorization: Bearer <access_token>
+{
+    "ho_ten": "Nguyễn Văn A",
+    "ngay_sinh": "1990-01-01",
+    "gioi_tinh": "Nam",
+    "cmnd_cccd": "123456789012",
+    "so_bhyt": "HS1234567890123",
+    "email": "nguyen.van.a@email.com",
+    "dia_chi": "123 Đường ABC, Quận 1, TP.HCM"
+}
+```
+
+### 3. Search and Book Appointment
+```python
+# Get available doctors
+GET /api/medical/doctors/?chuyen_khoa=Tim mạch
+Authorization: Bearer <access_token>
+
+# Get doctor's schedule
+GET /api/appointments/schedule/?ma_bac_si=1&ngay=2024-01-15
+Authorization: Bearer <access_token>
+
+# Book appointment
+POST /api/appointments/
+Authorization: Bearer <access_token>
+{
     "ma_bac_si": 1,
     "ma_dich_vu": 1,
-    "ma_lich": 1,
+    "ngay_kham": "2024-01-15",
+    "gio_kham": "09:00:00",
     "ghi_chu": "Khám định kỳ"
-  }'
+}
 ```
 
-### 4. Upload file import
-
-```bash
-curl -X POST http://localhost:8000/api/utils/import/benh-nhan/ \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -F "file=@benh_nhan.csv"
+### 4. Process Payment
+```python
+# Create payment
+POST /api/payments/
+Authorization: Bearer <access_token>
+{
+    "ma_lich_hen": 1,
+    "so_tien": 500000,
+    "phuong_thuc_thanh_toan": "Tiền mặt",
+    "ghi_chu": "Thanh toán dịch vụ khám bệnh"
+}
 ```
 
-## Dữ liệu mẫu
+### 5. Import/Export Data
+```python
+# Import patients from Excel
+POST /api/utils/import/benh-nhan/
+Authorization: Bearer <access_token>
+Content-Type: multipart/form-data
+file: <excel_file>
 
-Hệ thống đã có sẵn dữ liệu mẫu bao gồm:
+# Export appointment statistics
+GET /api/utils/export/thong-ke/?from_date=2024-01-01&to_date=2024-01-31
+Authorization: Bearer <access_token>
+```
 
-- 10 tài khoản người dùng với các vai trò khác nhau
-- 3 bệnh nhân mẫu
-- 4 cơ sở y tế
-- 9 chuyên khoa
-- 4 bác sĩ
-- 6 dịch vụ khám bệnh
-- 5 lịch làm việc
-- 5 lịch hẹn
-- 5 thanh toán
-- 1 phiên tư vấn từ xa
-
-## Troubleshooting
-
-### Lỗi kết nối database
-- Kiểm tra SQL Server đã chạy
-- Xác nhận thông tin kết nối trong settings.py
-- Cài đặt ODBC Driver 17 for SQL Server
-
-### Lỗi import file
-- Kiểm tra format file CSV/Excel
-- Đảm bảo có đủ cột bắt buộc
-- Kiểm tra encoding UTF-8
-
-### Lỗi authentication
-- Kiểm tra token hết hạn
-- Refresh token nếu cần
-- Kiểm tra quyền truy cập endpoint
-
-## Đóng góp
-
-1. Fork dự án
-2. Tạo feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit thay đổi (`git commit -m 'Add some AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Tạo Pull Request
-
-## License
-
-Dự án này thuộc về đại học và chỉ dành cho mục đích học tập.
-
-## Liên hệ
-
-- Sinh viên: [Tên sinh viên]
-- Email: [Email sinh viên]
-- Trường: Đại học [Tên trường]
-- Môn học: [Tên môn học]
+### 6. Health Check
+```python
+# System health check
+GET /api/health/
+{
+    "status": "healthy",
+    "timestamp": "2024-01-15T10:30:00Z",
+    "services": {
+        "database": "healthy",
+        "redis": "healthy",
+        "external_apis": "healthy"
+    }
+}
+```

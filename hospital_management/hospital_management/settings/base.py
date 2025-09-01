@@ -26,7 +26,6 @@ THIRD_PARTY_APPS = [
     'corsheaders',
     'drf_spectacular',
     'django_filters',
-    'django_redis',
 ]
 
 LOCAL_APPS = [
@@ -44,7 +43,6 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
     'core.middleware.RequestLoggingMiddleware',
     'core.middleware.ExceptionHandlingMiddleware',
     'core.middleware.PerformanceMonitoringMiddleware',
@@ -178,32 +176,17 @@ SIMPLE_JWT = {
     'TOKEN_TYPE_CLAIM': 'token_type',
 }
 
-# Cache Configuration
+# Cache Configuration - Using local memory cache for development
 CACHES = {
     'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/1'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'CONNECTION_POOL_KWARGS': {'max_connections': 50},
-            'PARSER_CLASS': 'redis.connection.HiredisParser',
-            'PICKLE_VERSION': -1,
-        },
-        'KEY_PREFIX': 'hospital',
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
         'TIMEOUT': 300,
-    },
-    'session': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/2'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        },
-    },
+    }
 }
 
-# Session Configuration
-SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
-SESSION_CACHE_ALIAS = 'session'
+# Session Configuration - Using database backend
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_AGE = 86400  # 1 day
 SESSION_COOKIE_SECURE = False  # Set to True in production
 SESSION_COOKIE_HTTPONLY = True
@@ -220,21 +203,14 @@ from core.logging_config import setup_logging_config
 # Logging configuration
 LOGGING = setup_logging_config()
 
-# Import API documentation settings
-from core.api_docs import SWAGGER_SETTINGS, API_INFO
-
 # DRF Spectacular settings
 SPECTACULAR_SETTINGS = {
-    'TITLE': API_INFO['title'],
-    'DESCRIPTION': API_INFO['description'],
-    'VERSION': API_INFO['version'],
+    'TITLE': 'Hospital Management System API',
+    'DESCRIPTION': 'API for Hospital Management System',
+    'VERSION': '2.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
     'COMPONENT_SPLIT_REQUEST': True,
     'SCHEMA_PATH_PREFIX': r'/api/v[0-9]',
-    'DEFAULT_AUTO_SCHEMA_CLASS': 'core.api_docs.get_custom_schema_class',
-    'SWAGGER_UI_SETTINGS': SWAGGER_SETTINGS.get('SWAGGER_UI_SETTINGS', {}),
-    'SERVERS': SWAGGER_SETTINGS.get('SERVERS', []),
-    'TAGS': SWAGGER_SETTINGS.get('TAGS', []),
 }
 
 # Security Headers
@@ -251,7 +227,6 @@ API_VERSION = 'v1'
 HEALTH_CHECK_APPS = [
     'health_check',
     'health_check.db',
-    'health_check.cache',
     'health_check.storage',
 ]
 

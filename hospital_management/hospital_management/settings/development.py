@@ -36,22 +36,8 @@ CORS_ALLOW_CREDENTIALS = True
 # Email Backend - Console for development
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-# Development-specific apps
-INSTALLED_APPS += [
-    'debug_toolbar',
-    'django_extensions',
-]
-
-MIDDLEWARE = [
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
-] + MIDDLEWARE
-
-# Debug Toolbar Settings
-INTERNAL_IPS = ['127.0.0.1', 'localhost']
-DEBUG_TOOLBAR_CONFIG = {
-    'SHOW_TOOLBAR_CALLBACK': lambda request: DEBUG,
-    'SHOW_TEMPLATE_CONTEXT': True,
-}
+# Development-specific settings
+# Note: Debug toolbar and extensions removed as they're not in requirements
 
 # Logging - More verbose in development
 LOGGING['handlers']['console']['level'] = 'DEBUG'
