@@ -174,6 +174,15 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
     'COMPONENT_SPLIT_REQUEST': True,
     'SCHEMA_PATH_PREFIX': '/api/',
+    'SCHEMA_COERCE_PATH_PK': False,
+    'SCHEMA_COERCE_METHOD_NAMES': {
+        'retrieve': 'retrieve',
+        'list': 'list',
+        'create': 'create',
+        'update': 'update',
+        'partial_update': 'partial_update',
+        'destroy': 'destroy',
+    },
     'CONTACT': {
         'name': 'Hospital Management System',
         'email': 'admin@hospital.com'

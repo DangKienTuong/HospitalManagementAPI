@@ -87,6 +87,20 @@ logger = logging.getLogger(__name__)
             500: OpenApiResponse(description='Internal server error')
         }
     ),
+    partial_update=extend_schema(
+        operation_id='payments_partial_update',
+        tags=['Payments'],
+        summary='Partially update payment',
+        description='Partially update payment information',
+        responses={
+            200: OpenApiResponse(description='Payment updated successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data provided'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Doctor or Admin access required'),
+            404: OpenApiResponse(description='Payment not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
     destroy=extend_schema(
         operation_id='payments_delete',
         tags=['Payments'],
@@ -263,6 +277,20 @@ class ThanhToanViewSet(viewsets.ModelViewSet):
         
         return queryset
     
+    @extend_schema(
+        operation_id='payments_update_status',
+        tags=['Payments'],
+        summary='Update payment status',
+        description='Update the status of a payment',
+        responses={
+            200: OpenApiResponse(description='Payment status updated successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid status'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Admin access required'),
+            404: OpenApiResponse(description='Payment not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    )
     @action(detail=True, methods=['patch'])
     def update_status(self, request, pk=None):
         """Cập nhật trạng thái thanh toán"""
@@ -278,6 +306,20 @@ class ThanhToanViewSet(viewsets.ModelViewSet):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+    @extend_schema(
+        operation_id='payments_process',
+        tags=['Payments'],
+        summary='Process payment',
+        description='Process a payment and update status to completed',
+        responses={
+            200: OpenApiResponse(description='Payment processed successfully'),
+            400: OpenApiResponse(description='Bad request - Payment already completed'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Admin or Doctor access required'),
+            404: OpenApiResponse(description='Payment not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    )
     @action(detail=True, methods=['post'])
     def process_payment(self, request, pk=None):
         """Xử lý thanh toán"""
@@ -298,6 +340,18 @@ class ThanhToanViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(thanh_toan)
         return Response(serializer.data)
     
+    @extend_schema(
+        operation_id='payments_statistics',
+        tags=['Payments'],
+        summary='Get payment statistics',
+        description='Get payment statistics (Admin only)',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved payment statistics'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Admin access required'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    )
     @action(detail=False, methods=['get'])
     def statistics(self, request):
         """Thống kê thanh toán"""

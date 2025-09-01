@@ -87,6 +87,20 @@ from authentication.permissions import IsAdminUser, IsDoctorOrAdmin
             500: OpenApiResponse(description='Internal server error')
         }
     ),
+    partial_update=extend_schema(
+        operation_id='medical_facilities_partial_update',
+        tags=['Medical Facilities'],
+        summary='Partially update medical facility',
+        description='Partially update medical facility information',
+        responses={
+            200: OpenApiResponse(description='Medical facility updated successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data provided'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Admin access required'),
+            404: OpenApiResponse(description='Medical facility not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
     destroy=extend_schema(
         operation_id='medical_facilities_delete',
         tags=['Medical Facilities'],
@@ -190,6 +204,17 @@ class CoSoYTeViewSet(viewsets.ModelViewSet):
             permission_classes = [IsAdminUser]
         return [permission() for permission in permission_classes]
     
+    @extend_schema(
+        operation_id='medical_facilities_specialties',
+        tags=['Medical Facilities'],
+        summary='Get facility specialties',
+        description='Get list of specialties available at a medical facility',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved specialties'),
+            404: OpenApiResponse(description='Medical facility not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    )
     @action(detail=True, methods=['get'])
     def chuyen_khoa(self, request, pk=None):
         """Lấy danh sách chuyên khoa của cơ sở y tế"""
@@ -198,6 +223,17 @@ class CoSoYTeViewSet(viewsets.ModelViewSet):
         serializer = ChuyenKhoaSerializer(chuyen_khoa, many=True)
         return Response(serializer.data)
     
+    @extend_schema(
+        operation_id='medical_facilities_doctors',
+        tags=['Medical Facilities'],
+        summary='Get facility doctors',
+        description='Get list of doctors working at a medical facility',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved doctors'),
+            404: OpenApiResponse(description='Medical facility not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    )
     @action(detail=True, methods=['get'])
     def bac_si(self, request, pk=None):
         """Lấy danh sách bác sĩ của cơ sở y tế"""
@@ -272,6 +308,20 @@ class CoSoYTeViewSet(viewsets.ModelViewSet):
             500: OpenApiResponse(description='Internal server error')
         }
     ),
+    partial_update=extend_schema(
+        operation_id='specialties_partial_update',
+        tags=['Specialties'],
+        summary='Partially update specialty',
+        description='Partially update specialty information',
+        responses={
+            200: OpenApiResponse(description='Specialty updated successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data provided'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Admin access required'),
+            404: OpenApiResponse(description='Specialty not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
     destroy=extend_schema(
         operation_id='specialties_delete',
         tags=['Specialties'],
@@ -330,6 +380,17 @@ class ChuyenKhoaViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+    @extend_schema(
+        operation_id='specialties_doctors',
+        tags=['Specialties'],
+        summary='Get specialty doctors',
+        description='Get list of doctors in a specialty',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved doctors'),
+            404: OpenApiResponse(description='Specialty not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    )
     @action(detail=True, methods=['get'])
     def bac_si(self, request, pk=None):
         """Lấy danh sách bác sĩ của chuyên khoa"""
@@ -338,6 +399,17 @@ class ChuyenKhoaViewSet(viewsets.ModelViewSet):
         serializer = BacSiSerializer(bac_si, many=True)
         return Response(serializer.data)
     
+    @extend_schema(
+        operation_id='specialties_services',
+        tags=['Specialties'],
+        summary='Get specialty services',
+        description='Get list of services available in a specialty',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved services'),
+            404: OpenApiResponse(description='Specialty not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    )
     @action(detail=True, methods=['get'])
     def dich_vu(self, request, pk=None):
         """Lấy danh sách dịch vụ của chuyên khoa"""
@@ -403,6 +475,20 @@ class ChuyenKhoaViewSet(viewsets.ModelViewSet):
         tags=['Doctors'],
         summary='Update doctor',
         description='Update doctor information',
+        responses={
+            200: OpenApiResponse(description='Doctor information updated successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data provided'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Doctor or Admin access required'),
+            404: OpenApiResponse(description='Doctor not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+    partial_update=extend_schema(
+        operation_id='doctors_partial_update',
+        tags=['Doctors'],
+        summary='Partially update doctor',
+        description='Partially update doctor information',
         responses={
             200: OpenApiResponse(description='Doctor information updated successfully'),
             400: OpenApiResponse(description='Bad request - Invalid data provided'),
@@ -530,6 +616,17 @@ class BacSiViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+    @extend_schema(
+        operation_id='doctors_schedule',
+        tags=['Doctors'],
+        summary='Get doctor schedule',
+        description='Get work schedule for a specific doctor',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved doctor schedule'),
+            404: OpenApiResponse(description='Doctor not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    )
     @action(detail=True, methods=['get'])
     def lich_lam_viec(self, request, pk=None):
         """Lấy lịch làm việc của bác sĩ"""
@@ -541,6 +638,18 @@ class BacSiViewSet(viewsets.ModelViewSet):
         serializer = LichLamViecSerializer(lich_lam_viec, many=True)
         return Response(serializer.data)
     
+    @extend_schema(
+        operation_id='doctors_profile',
+        tags=['Doctors'],
+        summary='Get current doctor profile',
+        description='Get profile information for the authenticated doctor',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved doctor profile'),
+            403: OpenApiResponse(description='Forbidden - Doctor access required'),
+            404: OpenApiResponse(description='Doctor profile not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    )
     @action(detail=False, methods=['get'])
     def profile(self, request):
         """Lấy thông tin profile bác sĩ hiện tại"""
@@ -626,6 +735,20 @@ class BacSiViewSet(viewsets.ModelViewSet):
             500: OpenApiResponse(description='Internal server error')
         }
     ),
+    partial_update=extend_schema(
+        operation_id='services_partial_update',
+        tags=['Medical Services'],
+        summary='Partially update service',
+        description='Partially update service information',
+        responses={
+            200: OpenApiResponse(description='Service updated successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data provided'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Admin access required'),
+            404: OpenApiResponse(description='Service not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
     destroy=extend_schema(
         operation_id='services_delete',
         tags=['Medical Services'],
@@ -684,6 +807,16 @@ class DichVuViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+    @extend_schema(
+        operation_id='services_teleconsultation',
+        tags=['Medical Services'],
+        summary='Get teleconsultation services',
+        description='Get list of teleconsultation services available',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved teleconsultation services'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    )
     @action(detail=False, methods=['get'])
     def tu_van_tu_xa(self, request):
         """Lấy danh sách dịch vụ tư vấn từ xa"""

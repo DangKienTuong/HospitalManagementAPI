@@ -1,0 +1,3895 @@
+openapi: 3.0.3
+info:
+  title: Hospital Management System API
+  version: 2.0.0
+  description: Comprehensive API for hospital management operations
+paths:
+  /api/appointments/lich-hen/:
+    get:
+      operationId: appointments_list
+      description: Get list of appointments
+      summary: List appointments
+      parameters:
+      - in: query
+        name: ma_bac_si
+        schema:
+          type: integer
+      - in: query
+        name: ma_benh_nhan
+        schema:
+          type: integer
+      - in: query
+        name: ngay_kham
+        schema:
+          type: string
+          format: date
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: trang_thai
+        schema:
+          type: string
+          enum:
+          - Cho xac nhan
+          - Da huy
+          - Da xac nhan
+          - Hoan thanh
+        description: |-
+          * `Cho xac nhan` - Cho xac nhan
+          * `Da xac nhan` - Da xac nhan
+          * `Hoan thanh` - Hoan thanh
+          * `Da huy` - Da huy
+      tags:
+      - Appointments - Bookings
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: Successfully retrieved appointments list
+        '401':
+          description: Unauthorized - Authentication required
+        '500':
+          description: Internal server error
+    post:
+      operationId: appointments_create
+      description: Create a new appointment
+      summary: Create appointment
+      tags:
+      - Appointments - Bookings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LichHenCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LichHenCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LichHenCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          description: Appointment created successfully
+        '400':
+          description: Bad request - Invalid data or appointment conflict
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Patient access required
+        '500':
+          description: Internal server error
+  /api/appointments/lich-hen/{ma_lich_hen}/:
+    get:
+      operationId: appointments_retrieve
+      description: Get detailed information about an appointment
+      summary: Get appointment details
+      parameters:
+      - in: path
+        name: ma_lich_hen
+        schema:
+          type: integer
+        description: A unique integer value identifying this Lich hen.
+        required: true
+      tags:
+      - Appointments - Bookings
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: Successfully retrieved appointment
+        '404':
+          description: Appointment not found
+        '500':
+          description: Internal server error
+    put:
+      operationId: appointments_update
+      description: Update appointment information
+      summary: Update appointment
+      parameters:
+      - in: path
+        name: ma_lich_hen
+        schema:
+          type: integer
+        description: A unique integer value identifying this Lich hen.
+        required: true
+      tags:
+      - Appointments - Bookings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LichHenRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LichHenRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LichHenRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Appointment updated successfully
+        '400':
+          description: Bad request - Invalid data
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Doctor or Admin access required
+        '404':
+          description: Appointment not found
+        '500':
+          description: Internal server error
+    patch:
+      operationId: appointments_partial_update
+      description: Partially update appointment information
+      summary: Partially update appointment
+      parameters:
+      - in: path
+        name: ma_lich_hen
+        schema:
+          type: integer
+        description: A unique integer value identifying this Lich hen.
+        required: true
+      tags:
+      - Appointments - Bookings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedLichHenRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedLichHenRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedLichHenRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Appointment updated successfully
+        '400':
+          description: Bad request - Invalid data
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Doctor or Admin access required
+        '404':
+          description: Appointment not found
+        '500':
+          description: Internal server error
+    delete:
+      operationId: appointments_delete
+      description: Delete an appointment
+      summary: Delete appointment
+      parameters:
+      - in: path
+        name: ma_lich_hen
+        schema:
+          type: integer
+        description: A unique integer value identifying this Lich hen.
+        required: true
+      tags:
+      - Appointments - Bookings
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Appointment deleted successfully
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Doctor or Admin access required
+        '404':
+          description: Appointment not found
+        '500':
+          description: Internal server error
+  /api/appointments/lich-hen/{ma_lich_hen}/cancel/:
+    post:
+      operationId: appointments_cancel
+      description: Cancel an appointment (must be at least 1 hour in advance)
+      summary: Cancel appointment
+      parameters:
+      - in: path
+        name: ma_lich_hen
+        schema:
+          type: integer
+        description: A unique integer value identifying this Lich hen.
+        required: true
+      tags:
+      - Appointments - Bookings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LichHenRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LichHenRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LichHenRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Appointment cancelled successfully
+        '400':
+          description: Cannot cancel - too close to appointment time or already cancelled
+        '401':
+          description: Unauthorized - Authentication required
+        '404':
+          description: Appointment not found
+        '500':
+          description: Internal server error
+  /api/appointments/lich-hen/{ma_lich_hen}/update_status/:
+    patch:
+      operationId: appointments_update_status
+      description: Update the status of an appointment
+      summary: Update appointment status
+      parameters:
+      - in: path
+        name: ma_lich_hen
+        schema:
+          type: integer
+        description: A unique integer value identifying this Lich hen.
+        required: true
+      tags:
+      - Appointments - Bookings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedLichHenRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedLichHenRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedLichHenRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Status updated successfully
+        '400':
+          description: Invalid status or unauthorized
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Doctor or Admin access required
+        '404':
+          description: Appointment not found
+        '500':
+          description: Internal server error
+  /api/appointments/lich-lam-viec/:
+    get:
+      operationId: schedules_list
+      description: Get list of doctor work schedules
+      summary: List work schedules
+      parameters:
+      - in: query
+        name: ma_bac_si
+        schema:
+          type: integer
+      - in: query
+        name: ngay_lam_viec
+        schema:
+          type: string
+          format: date
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - Appointments - Work Schedules
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: Successfully retrieved schedules list
+        '500':
+          description: Internal server error
+    post:
+      operationId: schedules_create
+      description: Create a new work schedule
+      summary: Create work schedule
+      tags:
+      - Appointments - Work Schedules
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LichLamViecRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LichLamViecRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LichLamViecRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          description: Schedule created successfully
+        '400':
+          description: Bad request - Invalid data or schedule conflict
+        '401':
+          description: Unauthorized - Authentication required
+        '500':
+          description: Internal server error
+  /api/appointments/lich-lam-viec/{ma_lich}/:
+    get:
+      operationId: schedules_retrieve
+      description: Get detailed information about a work schedule
+      summary: Get schedule details
+      parameters:
+      - in: path
+        name: ma_lich
+        schema:
+          type: integer
+        description: A unique integer value identifying this Lich lam viec.
+        required: true
+      tags:
+      - Appointments - Work Schedules
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: Successfully retrieved schedule
+        '404':
+          description: Schedule not found
+        '500':
+          description: Internal server error
+    put:
+      operationId: schedules_update
+      description: Update work schedule information
+      summary: Update work schedule
+      parameters:
+      - in: path
+        name: ma_lich
+        schema:
+          type: integer
+        description: A unique integer value identifying this Lich lam viec.
+        required: true
+      tags:
+      - Appointments - Work Schedules
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LichLamViecRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LichLamViecRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LichLamViecRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Schedule updated successfully
+        '400':
+          description: Bad request - Invalid data or schedule conflict
+        '401':
+          description: Unauthorized - Authentication required
+        '404':
+          description: Schedule not found
+        '500':
+          description: Internal server error
+    patch:
+      operationId: schedules_partial_update
+      description: Partially update work schedule information
+      summary: Partially update work schedule
+      parameters:
+      - in: path
+        name: ma_lich
+        schema:
+          type: integer
+        description: A unique integer value identifying this Lich lam viec.
+        required: true
+      tags:
+      - Appointments - Work Schedules
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedLichLamViecRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedLichLamViecRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedLichLamViecRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Schedule updated successfully
+        '400':
+          description: Bad request - Invalid data or schedule conflict
+        '401':
+          description: Unauthorized - Authentication required
+        '404':
+          description: Schedule not found
+        '500':
+          description: Internal server error
+    delete:
+      operationId: schedules_delete
+      description: Delete a work schedule
+      summary: Delete work schedule
+      parameters:
+      - in: path
+        name: ma_lich
+        schema:
+          type: integer
+        description: A unique integer value identifying this Lich lam viec.
+        required: true
+      tags:
+      - Appointments - Work Schedules
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Schedule deleted successfully
+        '401':
+          description: Unauthorized - Authentication required
+        '404':
+          description: Schedule not found
+        '500':
+          description: Internal server error
+  /api/appointments/lich-lam-viec/available/:
+    get:
+      operationId: schedules_available
+      description: Get list of work schedules with available slots
+      summary: Get available schedules
+      tags:
+      - Appointments - Work Schedules
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: Successfully retrieved available schedules
+        '500':
+          description: Internal server error
+  /api/appointments/phien-tu-van/:
+    get:
+      operationId: teleconsultation_sessions_list
+      description: Get list of teleconsultation sessions
+      summary: List teleconsultation sessions
+      parameters:
+      - in: query
+        name: ma_lich_hen__ma_bac_si
+        schema:
+          type: integer
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: trang_thai
+        schema:
+          type: string
+          enum:
+          - Chua bat dau
+          - Da huy
+          - Da ket thuc
+          - Dang dien ra
+        description: |-
+          * `Chua bat dau` - Chua bat dau
+          * `Dang dien ra` - Dang dien ra
+          * `Da ket thuc` - Da ket thuc
+          * `Da huy` - Da huy
+      tags:
+      - Appointments - Teleconsultation
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Successfully retrieved sessions list
+        '401':
+          description: Unauthorized - Authentication required
+        '500':
+          description: Internal server error
+    post:
+      operationId: teleconsultation_sessions_create
+      description: Create a new teleconsultation session
+      summary: Create teleconsultation session
+      tags:
+      - Appointments - Teleconsultation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhienTuVanTuXaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PhienTuVanTuXaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PhienTuVanTuXaRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          description: Session created successfully
+        '400':
+          description: Bad request - Invalid data
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Doctor or Admin access required
+        '500':
+          description: Internal server error
+  /api/appointments/phien-tu-van/{ma_phien}/:
+    get:
+      operationId: teleconsultation_sessions_retrieve
+      description: Get detailed information about a teleconsultation session
+      summary: Get session details
+      parameters:
+      - in: path
+        name: ma_phien
+        schema:
+          type: integer
+        description: A unique integer value identifying this Phien tu van tu xa.
+        required: true
+      tags:
+      - Appointments - Teleconsultation
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Successfully retrieved session
+        '401':
+          description: Unauthorized - Authentication required
+        '404':
+          description: Session not found
+        '500':
+          description: Internal server error
+    put:
+      operationId: teleconsultation_sessions_update
+      description: Update teleconsultation session information
+      summary: Update session
+      parameters:
+      - in: path
+        name: ma_phien
+        schema:
+          type: integer
+        description: A unique integer value identifying this Phien tu van tu xa.
+        required: true
+      tags:
+      - Appointments - Teleconsultation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhienTuVanTuXaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PhienTuVanTuXaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PhienTuVanTuXaRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Session updated successfully
+        '400':
+          description: Bad request - Invalid data
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Doctor or Admin access required
+        '404':
+          description: Session not found
+        '500':
+          description: Internal server error
+    patch:
+      operationId: teleconsultation_sessions_partial_update
+      description: Partially update teleconsultation session information
+      summary: Partially update session
+      parameters:
+      - in: path
+        name: ma_phien
+        schema:
+          type: integer
+        description: A unique integer value identifying this Phien tu van tu xa.
+        required: true
+      tags:
+      - Appointments - Teleconsultation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPhienTuVanTuXaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPhienTuVanTuXaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPhienTuVanTuXaRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Session updated successfully
+        '400':
+          description: Bad request - Invalid data
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Doctor or Admin access required
+        '404':
+          description: Session not found
+        '500':
+          description: Internal server error
+    delete:
+      operationId: teleconsultation_sessions_delete
+      description: Delete a teleconsultation session
+      summary: Delete session
+      parameters:
+      - in: path
+        name: ma_phien
+        schema:
+          type: integer
+        description: A unique integer value identifying this Phien tu van tu xa.
+        required: true
+      tags:
+      - Appointments - Teleconsultation
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Session deleted successfully
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Doctor or Admin access required
+        '404':
+          description: Session not found
+        '500':
+          description: Internal server error
+  /api/appointments/phien-tu-van/{ma_phien}/end_session/:
+    post:
+      operationId: teleconsultation_end_session
+      description: End a teleconsultation session and update appointment status
+      summary: End teleconsultation session
+      parameters:
+      - in: path
+        name: ma_phien
+        schema:
+          type: integer
+        description: A unique integer value identifying this Phien tu van tu xa.
+        required: true
+      tags:
+      - Appointments - Teleconsultation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhienTuVanTuXaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PhienTuVanTuXaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PhienTuVanTuXaRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Session ended successfully
+        '400':
+          description: Session not started or already ended
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Doctor or Admin access required
+        '404':
+          description: Session not found
+        '500':
+          description: Internal server error
+  /api/appointments/phien-tu-van/{ma_phien}/start_session/:
+    post:
+      operationId: teleconsultation_start_session
+      description: Start a teleconsultation session
+      summary: Start teleconsultation session
+      parameters:
+      - in: path
+        name: ma_phien
+        schema:
+          type: integer
+        description: A unique integer value identifying this Phien tu van tu xa.
+        required: true
+      tags:
+      - Appointments - Teleconsultation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhienTuVanTuXaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PhienTuVanTuXaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PhienTuVanTuXaRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Session started successfully
+        '400':
+          description: Session already started or ended
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Doctor or Admin access required
+        '404':
+          description: Session not found
+        '500':
+          description: Internal server error
+  /api/auth/change-password/:
+    post:
+      operationId: auth_change_password_create
+      description: Change user password
+      summary: Change password
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+          description: ''
+  /api/auth/login/:
+    post:
+      operationId: auth_login_create
+      description: Authenticate user with phone number and password, returns JWT tokens
+      summary: User login
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomTokenObtainPairRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CustomTokenObtainPairRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CustomTokenObtainPairRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access:
+                    type: string
+                    description: JWT access token
+                  refresh:
+                    type: string
+                    description: JWT refresh token
+                  user:
+                    type: object
+                    properties:
+                      ma_nguoi_dung:
+                        type: integer
+                      so_dien_thoai:
+                        type: string
+                      vai_tro:
+                        type: string
+                      trang_thai:
+                        type: string
+          description: Login successful
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message
+                  details:
+                    type: object
+                    description: Field-specific errors
+          description: Bad request - Invalid input data
+        '401':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Authentication error message
+          description: Unauthorized - Invalid credentials
+        '429':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Rate limit error message
+          description: Too many requests - Rate limit exceeded
+        '500':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Server error message
+          description: Internal server error
+  /api/auth/permissions/:
+    get:
+      operationId: auth_permissions_retrieve
+      description: Get current user role and permissions
+      summary: Check user permissions
+      tags:
+      - Authentication
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vai_tro:
+                    type: string
+                  is_admin:
+                    type: boolean
+                  is_doctor:
+                    type: boolean
+                  is_patient:
+                    type: boolean
+                  is_staff:
+                    type: boolean
+                  trang_thai:
+                    type: string
+          description: ''
+  /api/auth/profile/:
+    get:
+      operationId: auth_profile_retrieve
+      description: Get current user profile information
+      summary: Get user profile
+      tags:
+      - Authentication
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NguoiDung'
+          description: ''
+    patch:
+      operationId: auth_profile_partial_update
+      description: Update current user profile information
+      summary: Update user profile
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedNguoiDungRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedNguoiDungRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedNguoiDungRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NguoiDung'
+          description: ''
+  /api/auth/refresh/:
+    post:
+      operationId: auth_refresh_create
+      description: Get a new access token using refresh token
+      summary: Refresh JWT token
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          type:
+            schema:
+              type: object
+              additionalProperties: {}
+              description: Unspecified request body
+          properties:
+            schema:
+              refresh:
+                type: string
+                description: Refresh token
+          required:
+            schema:
+              type: object
+              additionalProperties: {}
+              description: Unspecified request body
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access:
+                    type: string
+                    description: New JWT access token
+          description: Token refresh successful
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message
+          description: Bad request - Invalid refresh token format
+        '401':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    description: Token error message
+          description: Unauthorized - Invalid or expired refresh token
+  /api/auth/register/:
+    post:
+      operationId: auth_register_create
+      description: Register a new user account
+      summary: User registration
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NguoiDungRegistrationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NguoiDungRegistrationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NguoiDungRegistrationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NguoiDung'
+          description: ''
+  /api/auth/verify/:
+    post:
+      operationId: auth_verify_create
+      description: Verify if a JWT token is valid
+      summary: Verify JWT token
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          type:
+            schema:
+              type: object
+              additionalProperties: {}
+              description: Unspecified request body
+          properties:
+            schema:
+              token:
+                type: string
+                description: JWT token to verify
+          required:
+            schema:
+              type: object
+              additionalProperties: {}
+              description: Unspecified request body
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: {}
+          description: Token is valid
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message
+          description: Bad request - Missing token
+        '401':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    description: Token validation error
+          description: Unauthorized - Invalid token
+  /api/medical/bac-si/:
+    get:
+      operationId: doctors_list
+      description: Get list of doctors with filtering capabilities
+      summary: List doctors
+      parameters:
+      - in: query
+        name: gioi_tinh
+        schema:
+          type: string
+          enum:
+          - Nam
+          - Nữ
+        description: |-
+          * `Nam` - Nam
+          * `Nữ` - Nữ
+      - in: query
+        name: hoc_vi
+        schema:
+          type: string
+          enum:
+          - Bác sĩ
+          - Giáo sư
+          - Phó giáo sư
+          - Thạc sĩ
+          - Tiến sĩ
+        description: |-
+          * `Bác sĩ` - Bác sĩ
+          * `Thạc sĩ` - Thạc sĩ
+          * `Tiến sĩ` - Tiến sĩ
+          * `Phó giáo sư` - Phó giáo sư
+          * `Giáo sư` - Giáo sư
+      - in: query
+        name: ma_chuyen_khoa
+        schema:
+          type: integer
+      - in: query
+        name: ma_co_so
+        schema:
+          type: integer
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - Doctors
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: Successfully retrieved doctors list
+        '500':
+          description: Internal server error
+    post:
+      operationId: doctors_create
+      description: Create a new doctor profile
+      summary: Create doctor
+      tags:
+      - Doctors
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BacSiCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BacSiCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BacSiCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          description: Doctor profile created successfully
+        '400':
+          description: Bad request - Invalid data provided or data integrity violation
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Admin access required
+        '500':
+          description: Internal server error
+  /api/medical/bac-si/{ma_bac_si}/:
+    get:
+      operationId: doctors_retrieve
+      description: Get detailed information about a doctor
+      summary: Get doctor details
+      parameters:
+      - in: path
+        name: ma_bac_si
+        schema:
+          type: integer
+        description: A unique integer value identifying this Bac si.
+        required: true
+      tags:
+      - Doctors
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: Successfully retrieved doctor information
+        '404':
+          description: Doctor not found with specified ma_bac_si
+        '500':
+          description: Internal server error
+    put:
+      operationId: doctors_update
+      description: Update doctor information
+      summary: Update doctor
+      parameters:
+      - in: path
+        name: ma_bac_si
+        schema:
+          type: integer
+        description: A unique integer value identifying this Bac si.
+        required: true
+      tags:
+      - Doctors
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BacSiRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BacSiRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BacSiRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Doctor information updated successfully
+        '400':
+          description: Bad request - Invalid data provided
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Doctor or Admin access required
+        '404':
+          description: Doctor not found
+        '500':
+          description: Internal server error
+    patch:
+      operationId: doctors_partial_update
+      description: Partially update doctor information
+      summary: Partially update doctor
+      parameters:
+      - in: path
+        name: ma_bac_si
+        schema:
+          type: integer
+        description: A unique integer value identifying this Bac si.
+        required: true
+      tags:
+      - Doctors
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedBacSiRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedBacSiRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedBacSiRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Doctor information updated successfully
+        '400':
+          description: Bad request - Invalid data provided
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Doctor or Admin access required
+        '404':
+          description: Doctor not found
+        '500':
+          description: Internal server error
+    delete:
+      operationId: doctors_delete
+      description: Delete a doctor profile
+      summary: Delete doctor
+      parameters:
+      - in: path
+        name: ma_bac_si
+        schema:
+          type: integer
+        description: A unique integer value identifying this Bac si.
+        required: true
+      tags:
+      - Doctors
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Doctor profile deleted successfully
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Doctor or Admin access required
+        '404':
+          description: Doctor not found
+        '500':
+          description: Internal server error
+  /api/medical/bac-si/{ma_bac_si}/lich_lam_viec/:
+    get:
+      operationId: doctors_schedule
+      description: Get work schedule for a specific doctor
+      summary: Get doctor schedule
+      parameters:
+      - in: path
+        name: ma_bac_si
+        schema:
+          type: integer
+        description: A unique integer value identifying this Bac si.
+        required: true
+      tags:
+      - Doctors
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Successfully retrieved doctor schedule
+        '404':
+          description: Doctor not found
+        '500':
+          description: Internal server error
+  /api/medical/bac-si/profile/:
+    get:
+      operationId: doctors_profile
+      description: Get profile information for the authenticated doctor
+      summary: Get current doctor profile
+      tags:
+      - Doctors
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Successfully retrieved doctor profile
+        '403':
+          description: Forbidden - Doctor access required
+        '404':
+          description: Doctor profile not found
+        '500':
+          description: Internal server error
+  /api/medical/chuyen-khoa/:
+    get:
+      operationId: specialties_list
+      description: Get list of medical specialties
+      summary: List specialties
+      parameters:
+      - in: query
+        name: ma_co_so
+        schema:
+          type: integer
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - Specialties
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: Successfully retrieved specialties list
+        '500':
+          description: Internal server error
+    post:
+      operationId: specialties_create
+      description: Create a new medical specialty
+      summary: Create specialty
+      tags:
+      - Specialties
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChuyenKhoaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChuyenKhoaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChuyenKhoaRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          description: Specialty created successfully
+        '400':
+          description: Bad request - Invalid data provided
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Admin access required
+        '500':
+          description: Internal server error
+  /api/medical/chuyen-khoa/{ma_chuyen_khoa}/:
+    get:
+      operationId: specialties_retrieve
+      description: Get detailed information about a specialty
+      summary: Get specialty details
+      parameters:
+      - in: path
+        name: ma_chuyen_khoa
+        schema:
+          type: integer
+        description: A unique integer value identifying this Chuyen khoa.
+        required: true
+      tags:
+      - Specialties
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: Successfully retrieved specialty information
+        '404':
+          description: Specialty not found with specified ma_chuyen_khoa
+        '500':
+          description: Internal server error
+    put:
+      operationId: specialties_update
+      description: Update specialty information
+      summary: Update specialty
+      parameters:
+      - in: path
+        name: ma_chuyen_khoa
+        schema:
+          type: integer
+        description: A unique integer value identifying this Chuyen khoa.
+        required: true
+      tags:
+      - Specialties
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChuyenKhoaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChuyenKhoaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChuyenKhoaRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Specialty updated successfully
+        '400':
+          description: Bad request - Invalid data provided
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Admin access required
+        '404':
+          description: Specialty not found
+        '500':
+          description: Internal server error
+    patch:
+      operationId: specialties_partial_update
+      description: Partially update specialty information
+      summary: Partially update specialty
+      parameters:
+      - in: path
+        name: ma_chuyen_khoa
+        schema:
+          type: integer
+        description: A unique integer value identifying this Chuyen khoa.
+        required: true
+      tags:
+      - Specialties
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedChuyenKhoaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedChuyenKhoaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedChuyenKhoaRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Specialty updated successfully
+        '400':
+          description: Bad request - Invalid data provided
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Admin access required
+        '404':
+          description: Specialty not found
+        '500':
+          description: Internal server error
+    delete:
+      operationId: specialties_delete
+      description: Delete a specialty
+      summary: Delete specialty
+      parameters:
+      - in: path
+        name: ma_chuyen_khoa
+        schema:
+          type: integer
+        description: A unique integer value identifying this Chuyen khoa.
+        required: true
+      tags:
+      - Specialties
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Specialty deleted successfully
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Admin access required
+        '404':
+          description: Specialty not found
+        '500':
+          description: Internal server error
+  /api/medical/chuyen-khoa/{ma_chuyen_khoa}/bac_si/:
+    get:
+      operationId: specialties_doctors
+      description: Get list of doctors in a specialty
+      summary: Get specialty doctors
+      parameters:
+      - in: path
+        name: ma_chuyen_khoa
+        schema:
+          type: integer
+        description: A unique integer value identifying this Chuyen khoa.
+        required: true
+      tags:
+      - Specialties
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Successfully retrieved doctors
+        '404':
+          description: Specialty not found
+        '500':
+          description: Internal server error
+  /api/medical/chuyen-khoa/{ma_chuyen_khoa}/dich_vu/:
+    get:
+      operationId: specialties_services
+      description: Get list of services available in a specialty
+      summary: Get specialty services
+      parameters:
+      - in: path
+        name: ma_chuyen_khoa
+        schema:
+          type: integer
+        description: A unique integer value identifying this Chuyen khoa.
+        required: true
+      tags:
+      - Specialties
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Successfully retrieved services
+        '404':
+          description: Specialty not found
+        '500':
+          description: Internal server error
+  /api/medical/co-so-y-te/:
+    get:
+      operationId: medical_facilities_list
+      description: Get list of medical facilities
+      summary: List medical facilities
+      parameters:
+      - in: query
+        name: loai_hinh
+        schema:
+          type: string
+          enum:
+          - Bệnh viện công
+          - Bệnh viện tư
+          - Phòng khám
+          - Trung tâm y tế
+        description: |-
+          * `Bệnh viện công` - Bệnh viện công
+          * `Bệnh viện tư` - Bệnh viện tư
+          * `Phòng khám` - Phòng khám
+          * `Trung tâm y tế` - Trung tâm y tế
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - Medical Facilities
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: Successfully retrieved medical facilities list
+        '401':
+          description: Unauthorized - Authentication required
+        '500':
+          description: Internal server error
+    post:
+      operationId: medical_facilities_create
+      description: Create a new medical facility
+      summary: Create medical facility
+      tags:
+      - Medical Facilities
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CoSoYTeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CoSoYTeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CoSoYTeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          description: Medical facility created successfully
+        '400':
+          description: Bad request - Invalid data provided
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Admin access required
+        '500':
+          description: Internal server error
+  /api/medical/co-so-y-te/{ma_co_so}/:
+    get:
+      operationId: medical_facilities_retrieve
+      description: Get detailed information about a medical facility
+      summary: Get medical facility details
+      parameters:
+      - in: path
+        name: ma_co_so
+        schema:
+          type: integer
+        description: A unique integer value identifying this Co so y te.
+        required: true
+      tags:
+      - Medical Facilities
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: Successfully retrieved medical facility information
+        '404':
+          description: Medical facility not found with specified ma_co_so
+        '500':
+          description: Internal server error
+    put:
+      operationId: medical_facilities_update
+      description: Update medical facility information
+      summary: Update medical facility
+      parameters:
+      - in: path
+        name: ma_co_so
+        schema:
+          type: integer
+        description: A unique integer value identifying this Co so y te.
+        required: true
+      tags:
+      - Medical Facilities
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CoSoYTeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CoSoYTeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CoSoYTeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Medical facility updated successfully
+        '400':
+          description: Bad request - Invalid data provided
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Admin access required
+        '404':
+          description: Medical facility not found
+        '500':
+          description: Internal server error
+    patch:
+      operationId: medical_facilities_partial_update
+      description: Partially update medical facility information
+      summary: Partially update medical facility
+      parameters:
+      - in: path
+        name: ma_co_so
+        schema:
+          type: integer
+        description: A unique integer value identifying this Co so y te.
+        required: true
+      tags:
+      - Medical Facilities
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCoSoYTeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCoSoYTeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCoSoYTeRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Medical facility updated successfully
+        '400':
+          description: Bad request - Invalid data provided
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Admin access required
+        '404':
+          description: Medical facility not found
+        '500':
+          description: Internal server error
+    delete:
+      operationId: medical_facilities_delete
+      description: Delete a medical facility
+      summary: Delete medical facility
+      parameters:
+      - in: path
+        name: ma_co_so
+        schema:
+          type: integer
+        description: A unique integer value identifying this Co so y te.
+        required: true
+      tags:
+      - Medical Facilities
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Medical facility deleted successfully
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Admin access required
+        '404':
+          description: Medical facility not found
+        '500':
+          description: Internal server error
+  /api/medical/co-so-y-te/{ma_co_so}/bac_si/:
+    get:
+      operationId: medical_facilities_doctors
+      description: Get list of doctors working at a medical facility
+      summary: Get facility doctors
+      parameters:
+      - in: path
+        name: ma_co_so
+        schema:
+          type: integer
+        description: A unique integer value identifying this Co so y te.
+        required: true
+      tags:
+      - Medical Facilities
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Successfully retrieved doctors
+        '404':
+          description: Medical facility not found
+        '500':
+          description: Internal server error
+  /api/medical/co-so-y-te/{ma_co_so}/chuyen_khoa/:
+    get:
+      operationId: medical_facilities_specialties
+      description: Get list of specialties available at a medical facility
+      summary: Get facility specialties
+      parameters:
+      - in: path
+        name: ma_co_so
+        schema:
+          type: integer
+        description: A unique integer value identifying this Co so y te.
+        required: true
+      tags:
+      - Medical Facilities
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Successfully retrieved specialties
+        '404':
+          description: Medical facility not found
+        '500':
+          description: Internal server error
+  /api/medical/dich-vu/:
+    get:
+      operationId: services_list
+      description: Get list of medical services
+      summary: List medical services
+      parameters:
+      - in: query
+        name: loai_dich_vu
+        schema:
+          type: string
+          enum:
+          - Chẩn đoán hình ảnh
+          - Khám bệnh
+          - Thủ thuật
+          - Tư vấn từ xa
+          - Xét nghiệm
+        description: |-
+          * `Khám bệnh` - Khám bệnh
+          * `Xét nghiệm` - Xét nghiệm
+          * `Chẩn đoán hình ảnh` - Chẩn đoán hình ảnh
+          * `Thủ thuật` - Thủ thuật
+          * `Tư vấn từ xa` - Tư vấn từ xa
+      - in: query
+        name: ma_chuyen_khoa
+        schema:
+          type: integer
+      - in: query
+        name: ma_co_so
+        schema:
+          type: integer
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - Medical Services
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: Successfully retrieved services list
+        '500':
+          description: Internal server error
+    post:
+      operationId: services_create
+      description: Create a new medical service
+      summary: Create service
+      tags:
+      - Medical Services
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DichVuRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DichVuRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DichVuRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          description: Service created successfully
+        '400':
+          description: Bad request - Invalid data provided
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Admin access required
+        '500':
+          description: Internal server error
+  /api/medical/dich-vu/{ma_dich_vu}/:
+    get:
+      operationId: services_retrieve
+      description: Get detailed information about a medical service
+      summary: Get service details
+      parameters:
+      - in: path
+        name: ma_dich_vu
+        schema:
+          type: integer
+        description: A unique integer value identifying this Dich vu.
+        required: true
+      tags:
+      - Medical Services
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: Successfully retrieved service information
+        '404':
+          description: Service not found with specified ma_dich_vu
+        '500':
+          description: Internal server error
+    put:
+      operationId: services_update
+      description: Update service information
+      summary: Update service
+      parameters:
+      - in: path
+        name: ma_dich_vu
+        schema:
+          type: integer
+        description: A unique integer value identifying this Dich vu.
+        required: true
+      tags:
+      - Medical Services
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DichVuRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DichVuRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DichVuRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Service updated successfully
+        '400':
+          description: Bad request - Invalid data provided
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Admin access required
+        '404':
+          description: Service not found
+        '500':
+          description: Internal server error
+    patch:
+      operationId: services_partial_update
+      description: Partially update service information
+      summary: Partially update service
+      parameters:
+      - in: path
+        name: ma_dich_vu
+        schema:
+          type: integer
+        description: A unique integer value identifying this Dich vu.
+        required: true
+      tags:
+      - Medical Services
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDichVuRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDichVuRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDichVuRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Service updated successfully
+        '400':
+          description: Bad request - Invalid data provided
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Admin access required
+        '404':
+          description: Service not found
+        '500':
+          description: Internal server error
+    delete:
+      operationId: services_delete
+      description: Delete a service
+      summary: Delete service
+      parameters:
+      - in: path
+        name: ma_dich_vu
+        schema:
+          type: integer
+        description: A unique integer value identifying this Dich vu.
+        required: true
+      tags:
+      - Medical Services
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Service deleted successfully
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Admin access required
+        '404':
+          description: Service not found
+        '500':
+          description: Internal server error
+  /api/medical/dich-vu/tu_van_tu_xa/:
+    get:
+      operationId: services_teleconsultation
+      description: Get list of teleconsultation services available
+      summary: Get teleconsultation services
+      tags:
+      - Medical Services
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Successfully retrieved teleconsultation services
+        '500':
+          description: Internal server error
+  /api/payments/thanh-toan/:
+    get:
+      operationId: payments_list
+      description: Get list of payments
+      summary: List payments
+      parameters:
+      - in: query
+        name: ma_lich_hen__ma_bac_si
+        schema:
+          type: integer
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: phuong_thuc
+        schema:
+          type: string
+          enum:
+          - Chuyen khoan
+          - The tin dung
+          - Tien mat
+          - Vi dien tu
+        description: |-
+          * `Tien mat` - Tien mat
+          * `Chuyen khoan` - Chuyen khoan
+          * `The tin dung` - The tin dung
+          * `Vi dien tu` - Vi dien tu
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: trang_thai
+        schema:
+          type: string
+          enum:
+          - Chua thanh toan
+          - Da hoan tien
+          - Da thanh toan
+        description: |-
+          * `Chua thanh toan` - Chua thanh toan
+          * `Da thanh toan` - Da thanh toan
+          * `Da hoan tien` - Da hoan tien
+      tags:
+      - Payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Successfully retrieved payments list
+        '401':
+          description: Unauthorized - Authentication required
+        '500':
+          description: Internal server error
+    post:
+      operationId: payments_create
+      description: Create a new payment record
+      summary: Create payment
+      tags:
+      - Payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ThanhToanCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ThanhToanCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ThanhToanCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          description: Payment created successfully
+        '400':
+          description: Bad request - Invalid data provided
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Patient access required
+        '500':
+          description: Internal server error
+  /api/payments/thanh-toan/{ma_thanh_toan}/:
+    get:
+      operationId: payments_retrieve
+      description: Get detailed information about a payment
+      summary: Get payment details
+      parameters:
+      - in: path
+        name: ma_thanh_toan
+        schema:
+          type: integer
+        description: A unique integer value identifying this Thanh toan.
+        required: true
+      tags:
+      - Payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Successfully retrieved payment
+        '401':
+          description: Unauthorized - Authentication required
+        '404':
+          description: Payment not found with specified ma_thanh_toan
+        '500':
+          description: Internal server error
+    put:
+      operationId: payments_update
+      description: Update payment information
+      summary: Update payment
+      parameters:
+      - in: path
+        name: ma_thanh_toan
+        schema:
+          type: integer
+        description: A unique integer value identifying this Thanh toan.
+        required: true
+      tags:
+      - Payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ThanhToanRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ThanhToanRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ThanhToanRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Payment updated successfully
+        '400':
+          description: Bad request - Invalid data provided
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Doctor or Admin access required
+        '404':
+          description: Payment not found
+        '500':
+          description: Internal server error
+    patch:
+      operationId: payments_partial_update
+      description: Partially update payment information
+      summary: Partially update payment
+      parameters:
+      - in: path
+        name: ma_thanh_toan
+        schema:
+          type: integer
+        description: A unique integer value identifying this Thanh toan.
+        required: true
+      tags:
+      - Payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedThanhToanRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedThanhToanRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedThanhToanRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Payment updated successfully
+        '400':
+          description: Bad request - Invalid data provided
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Doctor or Admin access required
+        '404':
+          description: Payment not found
+        '500':
+          description: Internal server error
+    delete:
+      operationId: payments_delete
+      description: Delete a payment record
+      summary: Delete payment
+      parameters:
+      - in: path
+        name: ma_thanh_toan
+        schema:
+          type: integer
+        description: A unique integer value identifying this Thanh toan.
+        required: true
+      tags:
+      - Payments
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Payment deleted successfully
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Doctor or Admin access required
+        '404':
+          description: Payment not found
+        '500':
+          description: Internal server error
+  /api/payments/thanh-toan/{ma_thanh_toan}/process_payment/:
+    post:
+      operationId: payments_process
+      description: Process a payment and update status to completed
+      summary: Process payment
+      parameters:
+      - in: path
+        name: ma_thanh_toan
+        schema:
+          type: integer
+        description: A unique integer value identifying this Thanh toan.
+        required: true
+      tags:
+      - Payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ThanhToanRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ThanhToanRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ThanhToanRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Payment processed successfully
+        '400':
+          description: Bad request - Payment already completed
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Admin or Doctor access required
+        '404':
+          description: Payment not found
+        '500':
+          description: Internal server error
+  /api/payments/thanh-toan/{ma_thanh_toan}/update_status/:
+    patch:
+      operationId: payments_update_status
+      description: Update the status of a payment
+      summary: Update payment status
+      parameters:
+      - in: path
+        name: ma_thanh_toan
+        schema:
+          type: integer
+        description: A unique integer value identifying this Thanh toan.
+        required: true
+      tags:
+      - Payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedThanhToanUpdateStatusRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedThanhToanUpdateStatusRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedThanhToanUpdateStatusRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Payment status updated successfully
+        '400':
+          description: Bad request - Invalid status
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Admin access required
+        '404':
+          description: Payment not found
+        '500':
+          description: Internal server error
+  /api/payments/thanh-toan/statistics/:
+    get:
+      operationId: payments_statistics
+      description: Get payment statistics (Admin only)
+      summary: Get payment statistics
+      tags:
+      - Payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Successfully retrieved payment statistics
+        '401':
+          description: Unauthorized - Authentication required
+        '403':
+          description: Forbidden - Admin access required
+        '500':
+          description: Internal server error
+  /api/schema/:
+    get:
+      operationId: schema_retrieve
+      description: |-
+        OpenApi3 schema for this API. Format can be selected via content negotiation.
+
+        - YAML: application/vnd.oai.openapi
+        - JSON: application/vnd.oai.openapi+json
+      parameters:
+      - in: query
+        name: format
+        schema:
+          type: string
+          enum:
+          - json
+          - yaml
+      - in: query
+        name: lang
+        schema:
+          type: string
+          enum:
+          - af
+          - ar
+          - ar-dz
+          - ast
+          - az
+          - be
+          - bg
+          - bn
+          - br
+          - bs
+          - ca
+          - ckb
+          - cs
+          - cy
+          - da
+          - de
+          - dsb
+          - el
+          - en
+          - en-au
+          - en-gb
+          - eo
+          - es
+          - es-ar
+          - es-co
+          - es-mx
+          - es-ni
+          - es-ve
+          - et
+          - eu
+          - fa
+          - fi
+          - fr
+          - fy
+          - ga
+          - gd
+          - gl
+          - he
+          - hi
+          - hr
+          - hsb
+          - hu
+          - hy
+          - ia
+          - id
+          - ig
+          - io
+          - is
+          - it
+          - ja
+          - ka
+          - kab
+          - kk
+          - km
+          - kn
+          - ko
+          - ky
+          - lb
+          - lt
+          - lv
+          - mk
+          - ml
+          - mn
+          - mr
+          - ms
+          - my
+          - nb
+          - ne
+          - nl
+          - nn
+          - os
+          - pa
+          - pl
+          - pt
+          - pt-br
+          - ro
+          - ru
+          - sk
+          - sl
+          - sq
+          - sr
+          - sr-latn
+          - sv
+          - sw
+          - ta
+          - te
+          - tg
+          - th
+          - tk
+          - tr
+          - tt
+          - udm
+          - uk
+          - ur
+          - uz
+          - vi
+          - zh-hans
+          - zh-hant
+      tags:
+      - schema
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/vnd.oai.openapi:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/yaml:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/vnd.oai.openapi+json:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/users/benh-nhan/:
+    get:
+      operationId: patients_list
+      description: List all patients with filtering, searching and pagination
+      summary: List patients
+      parameters:
+      - in: query
+        name: gioi_tinh
+        schema:
+          type: string
+          enum:
+          - Khác
+          - Nam
+          - Nữ
+        description: |-
+          * `Nam` - Nam
+          * `Nữ` - Nữ
+          * `Khác` - Khác
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - Patients
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBenhNhanList'
+          description: List of patients
+        '204':
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - count
+                - results
+                properties:
+                  count:
+                    type: integer
+                    example: 123
+                  next:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://api.example.org/accounts/?page=4
+                  previous:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://api.example.org/accounts/?page=2
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        count:
+                          type: integer
+                          example: 0
+                        results:
+                          type: array
+                          items: {}
+          description: No patients found
+        '401':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Authentication credentials were not provided.
+          description: Unauthorized - Authentication required
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: You do not have permission to perform this action.
+          description: Forbidden - Insufficient permissions
+    post:
+      operationId: patients_create
+      description: Create a new patient record
+      summary: Create patient
+      tags:
+      - Patients
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BenhNhanCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BenhNhanCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BenhNhanCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BenhNhanCreate'
+          description: ''
+  /api/users/benh-nhan/{ma_benh_nhan}/:
+    get:
+      operationId: patients_retrieve
+      description: Get detailed information about a specific patient
+      summary: Get patient details
+      parameters:
+      - in: path
+        name: ma_benh_nhan
+        schema:
+          type: integer
+        description: A unique integer value identifying this Benh nhan.
+        required: true
+      tags:
+      - Patients
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Successfully retrieved patient information
+        '401':
+          description: Unauthorized - Authentication required
+        '404':
+          description: Patient not found
+        '500':
+          description: Internal server error
+    put:
+      operationId: patients_update
+      description: Update patient information
+      summary: Update patient
+      parameters:
+      - in: path
+        name: ma_benh_nhan
+        schema:
+          type: integer
+        description: A unique integer value identifying this Benh nhan.
+        required: true
+      tags:
+      - Patients
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BenhNhanRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BenhNhanRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BenhNhanRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BenhNhan'
+          description: ''
+    patch:
+      operationId: patients_partial_update
+      description: Partially update patient information
+      summary: Partially update patient
+      parameters:
+      - in: path
+        name: ma_benh_nhan
+        schema:
+          type: integer
+        description: A unique integer value identifying this Benh nhan.
+        required: true
+      tags:
+      - Patients
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedBenhNhanRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedBenhNhanRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedBenhNhanRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BenhNhan'
+          description: ''
+    delete:
+      operationId: patients_delete
+      description: Delete a patient record
+      summary: Delete patient
+      parameters:
+      - in: path
+        name: ma_benh_nhan
+        schema:
+          type: integer
+        description: A unique integer value identifying this Benh nhan.
+        required: true
+      tags:
+      - Patients
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/users/benh-nhan/{ma_benh_nhan}/lich_su_kham/:
+    get:
+      operationId: patients_medical_history
+      description: Get medical history of a specific patient
+      summary: Get patient medical history
+      parameters:
+      - in: path
+        name: ma_benh_nhan
+        schema:
+          type: integer
+        description: A unique integer value identifying this Benh nhan.
+        required: true
+      tags:
+      - Patients
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BenhNhan'
+          description: ''
+  /api/users/benh-nhan/profile/:
+    get:
+      operationId: patients_profile
+      description: Get profile information for the currently authenticated patient
+      summary: Get current patient profile
+      tags:
+      - Patients
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BenhNhan'
+          description: ''
+  /api/utils/export/benh-nhan/:
+    get:
+      operationId: utils_export_patients
+      description: Export patient data to Excel or CSV file
+      summary: Export patients data
+      tags:
+      - Utils
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/utils/export/lich-hen/:
+    get:
+      operationId: utils_export_lich_hen_retrieve
+      description: API để xuất báo cáo lịch hẹn
+      tags:
+      - utils
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/utils/export/thong-ke/:
+    get:
+      operationId: utils_export_thong_ke_retrieve
+      description: API để xuất báo cáo thống kê
+      tags:
+      - utils
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/utils/import/bac-si/:
+    post:
+      operationId: utils_import_bac_si_create
+      description: API để nhập dữ liệu bác sĩ từ file
+      tags:
+      - utils
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/utils/import/benh-nhan/:
+    post:
+      operationId: utils_import_patients
+      description: Import patient data from Excel or CSV file
+      summary: Import patients data
+      tags:
+      - Utils
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  results:
+                    type: object
+          description: ''
+  /api/utils/import/co-so-y-te/:
+    post:
+      operationId: utils_import_facilities
+      description: Import medical facilities data from Excel or CSV file
+      summary: Import medical facilities data
+      tags:
+      - Utils
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/utils/import/dich-vu/:
+    post:
+      operationId: utils_import_dich_vu_create
+      description: API để nhập dữ liệu dịch vụ từ file
+      tags:
+      - utils
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+components:
+  schemas:
+    BacSiCreateRequest:
+      type: object
+      description: Serializer để tạo bác sĩ cùng với tài khoản người dùng
+      properties:
+        ma_co_so:
+          type: integer
+        ma_chuyen_khoa:
+          type: integer
+          nullable: true
+        ho_ten:
+          type: string
+          minLength: 1
+          maxLength: 100
+        gioi_tinh:
+          $ref: '#/components/schemas/GioiTinh58aEnum'
+        hoc_vi:
+          $ref: '#/components/schemas/HocViEnum'
+        kinh_nghiem:
+          type: integer
+        gioi_thieu:
+          type: string
+        so_dien_thoai:
+          type: string
+          minLength: 1
+          maxLength: 15
+        mat_khau:
+          type: string
+          writeOnly: true
+          minLength: 8
+        xac_nhan_mat_khau:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - gioi_tinh
+      - ho_ten
+      - hoc_vi
+      - kinh_nghiem
+      - ma_co_so
+      - mat_khau
+      - so_dien_thoai
+      - xac_nhan_mat_khau
+    BacSiRequest:
+      type: object
+      properties:
+        ma_nguoi_dung:
+          type: integer
+        ma_co_so:
+          type: integer
+        ma_chuyen_khoa:
+          type: integer
+          nullable: true
+        ho_ten:
+          type: string
+          minLength: 1
+          maxLength: 100
+        gioi_tinh:
+          $ref: '#/components/schemas/GioiTinh58aEnum'
+        hoc_vi:
+          $ref: '#/components/schemas/HocViEnum'
+        kinh_nghiem:
+          type: integer
+        gioi_thieu:
+          type: string
+          nullable: true
+      required:
+      - gioi_tinh
+      - ho_ten
+      - hoc_vi
+      - kinh_nghiem
+      - ma_co_so
+      - ma_nguoi_dung
+    BenhNhan:
+      type: object
+      properties:
+        ma_benh_nhan:
+          type: integer
+          readOnly: true
+        ma_nguoi_dung:
+          type: integer
+        ho_ten:
+          type: string
+          maxLength: 100
+        ngay_sinh:
+          type: string
+          format: date
+        gioi_tinh:
+          $ref: '#/components/schemas/GioiTinhE7cEnum'
+        cmnd_cccd:
+          type: string
+          nullable: true
+          maxLength: 20
+        so_bhyt:
+          type: string
+          nullable: true
+          maxLength: 20
+        so_dien_thoai:
+          type: string
+          maxLength: 15
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 100
+        dia_chi:
+          type: string
+        so_dien_thoai_user:
+          type: string
+          readOnly: true
+        vai_tro:
+          type: string
+          readOnly: true
+      required:
+      - dia_chi
+      - gioi_tinh
+      - ho_ten
+      - ma_benh_nhan
+      - ma_nguoi_dung
+      - ngay_sinh
+      - so_dien_thoai
+      - so_dien_thoai_user
+      - vai_tro
+    BenhNhanCreate:
+      type: object
+      description: Serializer để tạo bệnh nhân cùng với tài khoản người dùng
+      properties:
+        ho_ten:
+          type: string
+          maxLength: 100
+        ngay_sinh:
+          type: string
+          format: date
+        gioi_tinh:
+          $ref: '#/components/schemas/GioiTinhE7cEnum'
+        cmnd_cccd:
+          type: string
+          maxLength: 20
+        so_bhyt:
+          type: string
+          maxLength: 20
+        so_dien_thoai:
+          type: string
+          maxLength: 15
+        email:
+          type: string
+          format: email
+        dia_chi:
+          type: string
+      required:
+      - dia_chi
+      - gioi_tinh
+      - ho_ten
+      - ngay_sinh
+      - so_dien_thoai
+    BenhNhanCreateRequest:
+      type: object
+      description: Serializer để tạo bệnh nhân cùng với tài khoản người dùng
+      properties:
+        ho_ten:
+          type: string
+          minLength: 1
+          maxLength: 100
+        ngay_sinh:
+          type: string
+          format: date
+        gioi_tinh:
+          $ref: '#/components/schemas/GioiTinhE7cEnum'
+        cmnd_cccd:
+          type: string
+          maxLength: 20
+        so_bhyt:
+          type: string
+          maxLength: 20
+        so_dien_thoai:
+          type: string
+          minLength: 1
+          maxLength: 15
+        email:
+          type: string
+          format: email
+        dia_chi:
+          type: string
+          minLength: 1
+        mat_khau:
+          type: string
+          writeOnly: true
+          minLength: 8
+        xac_nhan_mat_khau:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - dia_chi
+      - gioi_tinh
+      - ho_ten
+      - mat_khau
+      - ngay_sinh
+      - so_dien_thoai
+      - xac_nhan_mat_khau
+    BenhNhanRequest:
+      type: object
+      properties:
+        ma_nguoi_dung:
+          type: integer
+        ho_ten:
+          type: string
+          minLength: 1
+          maxLength: 100
+        ngay_sinh:
+          type: string
+          format: date
+        gioi_tinh:
+          $ref: '#/components/schemas/GioiTinhE7cEnum'
+        cmnd_cccd:
+          type: string
+          nullable: true
+          maxLength: 20
+        so_bhyt:
+          type: string
+          nullable: true
+          maxLength: 20
+        so_dien_thoai:
+          type: string
+          minLength: 1
+          maxLength: 15
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 100
+        dia_chi:
+          type: string
+          minLength: 1
+      required:
+      - dia_chi
+      - gioi_tinh
+      - ho_ten
+      - ma_nguoi_dung
+      - ngay_sinh
+      - so_dien_thoai
+    ChangePasswordRequest:
+      type: object
+      properties:
+        mat_khau_cu:
+          type: string
+          minLength: 1
+        mat_khau_moi:
+          type: string
+          minLength: 8
+        xac_nhan_mat_khau_moi:
+          type: string
+          minLength: 1
+      required:
+      - mat_khau_cu
+      - mat_khau_moi
+      - xac_nhan_mat_khau_moi
+    ChuyenKhoaRequest:
+      type: object
+      properties:
+        ma_co_so:
+          type: integer
+        ten_chuyen_khoa:
+          type: string
+          minLength: 1
+          maxLength: 100
+        mo_ta:
+          type: string
+          nullable: true
+      required:
+      - ma_co_so
+      - ten_chuyen_khoa
+    CoSoYTeRequest:
+      type: object
+      properties:
+        ten_co_so:
+          type: string
+          minLength: 1
+          maxLength: 200
+        loai_hinh:
+          $ref: '#/components/schemas/LoaiHinhEnum'
+        dia_chi:
+          type: string
+          minLength: 1
+        so_dien_thoai:
+          type: string
+          minLength: 1
+          maxLength: 15
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 100
+      required:
+      - dia_chi
+      - loai_hinh
+      - so_dien_thoai
+      - ten_co_so
+    CustomTokenObtainPairRequest:
+      type: object
+      properties:
+        so_dien_thoai:
+          type: string
+          writeOnly: true
+          minLength: 1
+        mat_khau:
+          type: string
+          minLength: 1
+          description: Password
+      required:
+      - mat_khau
+      - so_dien_thoai
+    DichVuRequest:
+      type: object
+      properties:
+        ma_co_so:
+          type: integer
+        ma_chuyen_khoa:
+          type: integer
+          nullable: true
+        ten_dich_vu:
+          type: string
+          minLength: 1
+          maxLength: 200
+        loai_dich_vu:
+          $ref: '#/components/schemas/LoaiDichVuEnum'
+        gia_tien:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,0})?$
+        thoi_gian_kham:
+          type: integer
+        mo_ta:
+          type: string
+          nullable: true
+      required:
+      - gia_tien
+      - loai_dich_vu
+      - ma_co_so
+      - ten_dich_vu
+      - thoi_gian_kham
+    GioiTinh58aEnum:
+      enum:
+      - Nam
+      - Nữ
+      type: string
+      description: |-
+        * `Nam` - Nam
+        * `Nữ` - Nữ
+    GioiTinhE7cEnum:
+      enum:
+      - Nam
+      - Nữ
+      - Khác
+      type: string
+      description: |-
+        * `Nam` - Nam
+        * `Nữ` - Nữ
+        * `Khác` - Khác
+    HocViEnum:
+      enum:
+      - Bác sĩ
+      - Thạc sĩ
+      - Tiến sĩ
+      - Phó giáo sư
+      - Giáo sư
+      type: string
+      description: |-
+        * `Bác sĩ` - Bác sĩ
+        * `Thạc sĩ` - Thạc sĩ
+        * `Tiến sĩ` - Tiến sĩ
+        * `Phó giáo sư` - Phó giáo sư
+        * `Giáo sư` - Giáo sư
+    LichHenCreateRequest:
+      type: object
+      properties:
+        ma_bac_si:
+          type: integer
+        ma_dich_vu:
+          type: integer
+        ma_lich:
+          type: integer
+        ghi_chu:
+          type: string
+          nullable: true
+      required:
+      - ma_bac_si
+      - ma_dich_vu
+      - ma_lich
+    LichHenRequest:
+      type: object
+      properties:
+        ma_benh_nhan:
+          type: integer
+        ma_bac_si:
+          type: integer
+        ma_dich_vu:
+          type: integer
+        ma_lich:
+          type: integer
+        ngay_kham:
+          type: string
+          format: date
+        gio_kham:
+          type: string
+          format: time
+        trang_thai:
+          $ref: '#/components/schemas/LichHenTrangThaiEnum'
+        ghi_chu:
+          type: string
+          nullable: true
+      required:
+      - gio_kham
+      - ma_bac_si
+      - ma_benh_nhan
+      - ma_dich_vu
+      - ma_lich
+      - ngay_kham
+    LichHenTrangThaiEnum:
+      enum:
+      - Cho xac nhan
+      - Da xac nhan
+      - Hoan thanh
+      - Da huy
+      type: string
+      description: |-
+        * `Cho xac nhan` - Cho xac nhan
+        * `Da xac nhan` - Da xac nhan
+        * `Hoan thanh` - Hoan thanh
+        * `Da huy` - Da huy
+    LichLamViecRequest:
+      type: object
+      properties:
+        ma_bac_si:
+          type: integer
+        ngay_lam_viec:
+          type: string
+          format: date
+        gio_bat_dau:
+          type: string
+          format: time
+        gio_ket_thuc:
+          type: string
+          format: time
+        so_luong_kham:
+          type: integer
+      required:
+      - gio_bat_dau
+      - gio_ket_thuc
+      - ma_bac_si
+      - ngay_lam_viec
+    LoaiDichVuEnum:
+      enum:
+      - Khám bệnh
+      - Xét nghiệm
+      - Chẩn đoán hình ảnh
+      - Thủ thuật
+      - Tư vấn từ xa
+      type: string
+      description: |-
+        * `Khám bệnh` - Khám bệnh
+        * `Xét nghiệm` - Xét nghiệm
+        * `Chẩn đoán hình ảnh` - Chẩn đoán hình ảnh
+        * `Thủ thuật` - Thủ thuật
+        * `Tư vấn từ xa` - Tư vấn từ xa
+    LoaiHinhEnum:
+      enum:
+      - Bệnh viện công
+      - Bệnh viện tư
+      - Phòng khám
+      - Trung tâm y tế
+      type: string
+      description: |-
+        * `Bệnh viện công` - Bệnh viện công
+        * `Bệnh viện tư` - Bệnh viện tư
+        * `Phòng khám` - Phòng khám
+        * `Trung tâm y tế` - Trung tâm y tế
+    NguoiDung:
+      type: object
+      properties:
+        ma_nguoi_dung:
+          type: integer
+          readOnly: true
+        so_dien_thoai:
+          type: string
+          maxLength: 15
+        vai_tro:
+          $ref: '#/components/schemas/VaiTroEnum'
+        ngay_tao:
+          type: string
+          format: date-time
+          readOnly: true
+        trang_thai:
+          type: boolean
+      required:
+      - ma_nguoi_dung
+      - ngay_tao
+      - so_dien_thoai
+      - vai_tro
+    NguoiDungRegistrationRequest:
+      type: object
+      properties:
+        so_dien_thoai:
+          type: string
+          minLength: 1
+          maxLength: 15
+        mat_khau:
+          type: string
+          writeOnly: true
+          minLength: 8
+        xac_nhan_mat_khau:
+          type: string
+          writeOnly: true
+          minLength: 1
+        vai_tro:
+          $ref: '#/components/schemas/VaiTroEnum'
+      required:
+      - mat_khau
+      - so_dien_thoai
+      - vai_tro
+      - xac_nhan_mat_khau
+    PaginatedBenhNhanList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/BenhNhan'
+    PatchedBacSiRequest:
+      type: object
+      properties:
+        ma_nguoi_dung:
+          type: integer
+        ma_co_so:
+          type: integer
+        ma_chuyen_khoa:
+          type: integer
+          nullable: true
+        ho_ten:
+          type: string
+          minLength: 1
+          maxLength: 100
+        gioi_tinh:
+          $ref: '#/components/schemas/GioiTinh58aEnum'
+        hoc_vi:
+          $ref: '#/components/schemas/HocViEnum'
+        kinh_nghiem:
+          type: integer
+        gioi_thieu:
+          type: string
+          nullable: true
+    PatchedBenhNhanRequest:
+      type: object
+      properties:
+        ma_nguoi_dung:
+          type: integer
+        ho_ten:
+          type: string
+          minLength: 1
+          maxLength: 100
+        ngay_sinh:
+          type: string
+          format: date
+        gioi_tinh:
+          $ref: '#/components/schemas/GioiTinhE7cEnum'
+        cmnd_cccd:
+          type: string
+          nullable: true
+          maxLength: 20
+        so_bhyt:
+          type: string
+          nullable: true
+          maxLength: 20
+        so_dien_thoai:
+          type: string
+          minLength: 1
+          maxLength: 15
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 100
+        dia_chi:
+          type: string
+          minLength: 1
+    PatchedChuyenKhoaRequest:
+      type: object
+      properties:
+        ma_co_so:
+          type: integer
+        ten_chuyen_khoa:
+          type: string
+          minLength: 1
+          maxLength: 100
+        mo_ta:
+          type: string
+          nullable: true
+    PatchedCoSoYTeRequest:
+      type: object
+      properties:
+        ten_co_so:
+          type: string
+          minLength: 1
+          maxLength: 200
+        loai_hinh:
+          $ref: '#/components/schemas/LoaiHinhEnum'
+        dia_chi:
+          type: string
+          minLength: 1
+        so_dien_thoai:
+          type: string
+          minLength: 1
+          maxLength: 15
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 100
+    PatchedDichVuRequest:
+      type: object
+      properties:
+        ma_co_so:
+          type: integer
+        ma_chuyen_khoa:
+          type: integer
+          nullable: true
+        ten_dich_vu:
+          type: string
+          minLength: 1
+          maxLength: 200
+        loai_dich_vu:
+          $ref: '#/components/schemas/LoaiDichVuEnum'
+        gia_tien:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,0})?$
+        thoi_gian_kham:
+          type: integer
+        mo_ta:
+          type: string
+          nullable: true
+    PatchedLichHenRequest:
+      type: object
+      properties:
+        ma_benh_nhan:
+          type: integer
+        ma_bac_si:
+          type: integer
+        ma_dich_vu:
+          type: integer
+        ma_lich:
+          type: integer
+        ngay_kham:
+          type: string
+          format: date
+        gio_kham:
+          type: string
+          format: time
+        trang_thai:
+          $ref: '#/components/schemas/LichHenTrangThaiEnum'
+        ghi_chu:
+          type: string
+          nullable: true
+    PatchedLichLamViecRequest:
+      type: object
+      properties:
+        ma_bac_si:
+          type: integer
+        ngay_lam_viec:
+          type: string
+          format: date
+        gio_bat_dau:
+          type: string
+          format: time
+        gio_ket_thuc:
+          type: string
+          format: time
+        so_luong_kham:
+          type: integer
+    PatchedNguoiDungRequest:
+      type: object
+      properties:
+        so_dien_thoai:
+          type: string
+          minLength: 1
+          maxLength: 15
+        vai_tro:
+          $ref: '#/components/schemas/VaiTroEnum'
+        trang_thai:
+          type: boolean
+    PatchedPhienTuVanTuXaRequest:
+      type: object
+      properties:
+        ma_lich_hen:
+          type: integer
+        ma_cuoc_goi:
+          type: string
+          nullable: true
+          maxLength: 100
+        thoi_gian_bat_dau:
+          type: string
+          format: date-time
+          nullable: true
+        thoi_gian_ket_thuc:
+          type: string
+          format: date-time
+          nullable: true
+        trang_thai:
+          $ref: '#/components/schemas/PhienTuVanTuXaTrangThaiEnum'
+        ghi_chu_bac_si:
+          type: string
+          nullable: true
+    PatchedThanhToanRequest:
+      type: object
+      properties:
+        ma_lich_hen:
+          type: integer
+        so_tien:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,0})?$
+        phuong_thuc:
+          $ref: '#/components/schemas/PhuongThucEnum'
+        trang_thai:
+          $ref: '#/components/schemas/TrangThaiCa8Enum'
+        ma_giao_dich:
+          type: string
+          nullable: true
+          maxLength: 100
+    PatchedThanhToanUpdateStatusRequest:
+      type: object
+      properties:
+        trang_thai:
+          $ref: '#/components/schemas/TrangThaiCa8Enum'
+        ma_giao_dich:
+          type: string
+          nullable: true
+          maxLength: 100
+    PhienTuVanTuXaRequest:
+      type: object
+      properties:
+        ma_lich_hen:
+          type: integer
+        ma_cuoc_goi:
+          type: string
+          nullable: true
+          maxLength: 100
+        thoi_gian_bat_dau:
+          type: string
+          format: date-time
+          nullable: true
+        thoi_gian_ket_thuc:
+          type: string
+          format: date-time
+          nullable: true
+        trang_thai:
+          $ref: '#/components/schemas/PhienTuVanTuXaTrangThaiEnum'
+        ghi_chu_bac_si:
+          type: string
+          nullable: true
+      required:
+      - ma_lich_hen
+    PhienTuVanTuXaTrangThaiEnum:
+      enum:
+      - Chua bat dau
+      - Dang dien ra
+      - Da ket thuc
+      - Da huy
+      type: string
+      description: |-
+        * `Chua bat dau` - Chua bat dau
+        * `Dang dien ra` - Dang dien ra
+        * `Da ket thuc` - Da ket thuc
+        * `Da huy` - Da huy
+    PhuongThucEnum:
+      enum:
+      - Tien mat
+      - Chuyen khoan
+      - The tin dung
+      - Vi dien tu
+      type: string
+      description: |-
+        * `Tien mat` - Tien mat
+        * `Chuyen khoan` - Chuyen khoan
+        * `The tin dung` - The tin dung
+        * `Vi dien tu` - Vi dien tu
+    ThanhToanCreateRequest:
+      type: object
+      properties:
+        ma_lich_hen:
+          type: integer
+        phuong_thuc:
+          $ref: '#/components/schemas/PhuongThucEnum'
+        ma_giao_dich:
+          type: string
+          nullable: true
+          maxLength: 100
+      required:
+      - ma_lich_hen
+      - phuong_thuc
+    ThanhToanRequest:
+      type: object
+      properties:
+        ma_lich_hen:
+          type: integer
+        so_tien:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,0})?$
+        phuong_thuc:
+          $ref: '#/components/schemas/PhuongThucEnum'
+        trang_thai:
+          $ref: '#/components/schemas/TrangThaiCa8Enum'
+        ma_giao_dich:
+          type: string
+          nullable: true
+          maxLength: 100
+      required:
+      - ma_lich_hen
+      - phuong_thuc
+      - so_tien
+    TrangThaiCa8Enum:
+      enum:
+      - Chua thanh toan
+      - Da thanh toan
+      - Da hoan tien
+      type: string
+      description: |-
+        * `Chua thanh toan` - Chua thanh toan
+        * `Da thanh toan` - Da thanh toan
+        * `Da hoan tien` - Da hoan tien
+    VaiTroEnum:
+      enum:
+      - Admin
+      - Bác sĩ
+      - Bệnh nhân
+      - Nhân viên
+      type: string
+      description: |-
+        * `Admin` - Quản trị viên
+        * `Bác sĩ` - Bác sĩ
+        * `Bệnh nhân` - Bệnh nhân
+        * `Nhân viên` - Nhân viên y tế
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

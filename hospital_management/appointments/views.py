@@ -24,7 +24,7 @@ from authentication.permissions import IsAdminUser, IsDoctorUser, IsPatientUser,
 @extend_schema_view(
     list=extend_schema(
         operation_id='schedules_list',
-        tags=['Work Schedules'],
+        tags=['Appointments - Work Schedules'],
         summary='List work schedules',
         description='Get list of doctor work schedules',
         responses={
@@ -34,7 +34,7 @@ from authentication.permissions import IsAdminUser, IsDoctorUser, IsPatientUser,
     ),
     create=extend_schema(
         operation_id='schedules_create',
-        tags=['Work Schedules'],
+        tags=['Appointments - Work Schedules'],
         summary='Create work schedule',
         description='Create a new work schedule',
         responses={
@@ -46,7 +46,7 @@ from authentication.permissions import IsAdminUser, IsDoctorUser, IsPatientUser,
     ),
     retrieve=extend_schema(
         operation_id='schedules_retrieve',
-        tags=['Work Schedules'],
+        tags=['Appointments - Work Schedules'],
         summary='Get schedule details',
         description='Get detailed information about a work schedule',
         responses={
@@ -57,7 +57,7 @@ from authentication.permissions import IsAdminUser, IsDoctorUser, IsPatientUser,
     ),
     update=extend_schema(
         operation_id='schedules_update',
-        tags=['Work Schedules'],
+        tags=['Appointments - Work Schedules'],
         summary='Update work schedule',
         description='Update work schedule information',
         responses={
@@ -68,9 +68,22 @@ from authentication.permissions import IsAdminUser, IsDoctorUser, IsPatientUser,
             500: OpenApiResponse(description='Internal server error')
         }
     ),
+    partial_update=extend_schema(
+        operation_id='schedules_partial_update',
+        tags=['Appointments - Work Schedules'],
+        summary='Partially update work schedule',
+        description='Partially update work schedule information',
+        responses={
+            200: OpenApiResponse(description='Schedule updated successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data or schedule conflict'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            404: OpenApiResponse(description='Schedule not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
     destroy=extend_schema(
         operation_id='schedules_delete',
-        tags=['Work Schedules'],
+        tags=['Appointments - Work Schedules'],
         summary='Delete work schedule',
         description='Delete a work schedule',
         responses={
@@ -164,6 +177,16 @@ class LichLamViecViewSet(viewsets.ModelViewSet):
         
         return queryset
     
+    @extend_schema(
+        operation_id='schedules_available',
+        tags=['Appointments - Work Schedules'],
+        summary='Get available schedules',
+        description='Get list of work schedules with available slots',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved available schedules'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    )
     @action(detail=False, methods=['get'])
     def available(self, request):
         """Lấy danh sách lịch làm việc còn chỗ trống"""
@@ -178,7 +201,7 @@ class LichLamViecViewSet(viewsets.ModelViewSet):
 @extend_schema_view(
     list=extend_schema(
         operation_id='appointments_list',
-        tags=['Appointments'],
+        tags=['Appointments - Bookings'],
         summary='List appointments',
         description='Get list of appointments',
         responses={
@@ -189,7 +212,7 @@ class LichLamViecViewSet(viewsets.ModelViewSet):
     ),
     create=extend_schema(
         operation_id='appointments_create',
-        tags=['Appointments'],
+        tags=['Appointments - Bookings'],
         summary='Create appointment',
         description='Create a new appointment',
         responses={
@@ -202,7 +225,7 @@ class LichLamViecViewSet(viewsets.ModelViewSet):
     ),
     retrieve=extend_schema(
         operation_id='appointments_retrieve',
-        tags=['Appointments'],
+        tags=['Appointments - Bookings'],
         summary='Get appointment details',
         description='Get detailed information about an appointment',
         responses={
@@ -229,7 +252,7 @@ class LichLamViecViewSet(viewsets.ModelViewSet):
     ),
     update=extend_schema(
         operation_id='appointments_update',
-        tags=['Appointments'],
+        tags=['Appointments - Bookings'],
         summary='Update appointment',
         description='Update appointment information',
         responses={
@@ -241,9 +264,23 @@ class LichLamViecViewSet(viewsets.ModelViewSet):
             500: OpenApiResponse(description='Internal server error')
         }
     ),
+    partial_update=extend_schema(
+        operation_id='appointments_partial_update',
+        tags=['Appointments - Bookings'],
+        summary='Partially update appointment',
+        description='Partially update appointment information',
+        responses={
+            200: OpenApiResponse(description='Appointment updated successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Doctor or Admin access required'),
+            404: OpenApiResponse(description='Appointment not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
     destroy=extend_schema(
         operation_id='appointments_delete',
-        tags=['Appointments'],
+        tags=['Appointments - Bookings'],
         summary='Delete appointment',
         description='Delete an appointment',
         responses={
@@ -269,8 +306,10 @@ class LichHenViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             permission_classes = [permissions.AllowAny]
+        elif self.action == 'create':
+            permission_classes = [permissions.IsAuthenticated]  # Allow any authenticated user to create appointments
         else:
-            permission_classes = [permissions.IsAuthenticated]
+            permission_classes = [IsDoctorOrAdmin]  # Only doctors and admins can update/delete
         return [permission() for permission in permission_classes]
 
     def handle_exception(self, exc):
@@ -384,14 +423,6 @@ class LichHenViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
-    def get_permissions(self):
-        if self.action == 'create':
-            permission_classes = [IsPatientUser]
-        elif self.action in ['list', 'retrieve']:
-            permission_classes = [permissions.IsAuthenticated]
-        else:
-            permission_classes = [IsDoctorOrAdmin]
-        return [permission() for permission in permission_classes]
     
     def get_serializer_class(self):
         if self.action == 'create':
@@ -422,6 +453,20 @@ class LichHenViewSet(viewsets.ModelViewSet):
         
         return queryset
     
+    @extend_schema(
+        operation_id='appointments_update_status',
+        tags=['Appointments - Bookings'],
+        summary='Update appointment status',
+        description='Update the status of an appointment',
+        responses={
+            200: OpenApiResponse(description='Status updated successfully'),
+            400: OpenApiResponse(description='Invalid status or unauthorized'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Doctor or Admin access required'),
+            404: OpenApiResponse(description='Appointment not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    )
     @action(detail=True, methods=['patch'])
     def update_status(self, request, pk=None):
         """Cập nhật trạng thái lịch hẹn"""
@@ -447,6 +492,19 @@ class LichHenViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(lich_hen)
         return Response(serializer.data)
     
+    @extend_schema(
+        operation_id='appointments_cancel',
+        tags=['Appointments - Bookings'],
+        summary='Cancel appointment',
+        description='Cancel an appointment (must be at least 1 hour in advance)',
+        responses={
+            200: OpenApiResponse(description='Appointment cancelled successfully'),
+            400: OpenApiResponse(description='Cannot cancel - too close to appointment time or already cancelled'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            404: OpenApiResponse(description='Appointment not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    )
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
         """Hủy lịch hẹn"""
@@ -485,7 +543,7 @@ class LichHenViewSet(viewsets.ModelViewSet):
 @extend_schema_view(
     list=extend_schema(
         operation_id='teleconsultation_sessions_list',
-        tags=['Teleconsultation'],
+        tags=['Appointments - Teleconsultation'],
         summary='List teleconsultation sessions',
         description='Get list of teleconsultation sessions',
         responses={
@@ -496,7 +554,7 @@ class LichHenViewSet(viewsets.ModelViewSet):
     ),
     create=extend_schema(
         operation_id='teleconsultation_sessions_create',
-        tags=['Teleconsultation'],
+        tags=['Appointments - Teleconsultation'],
         summary='Create teleconsultation session',
         description='Create a new teleconsultation session',
         responses={
@@ -509,7 +567,7 @@ class LichHenViewSet(viewsets.ModelViewSet):
     ),
     retrieve=extend_schema(
         operation_id='teleconsultation_sessions_retrieve',
-        tags=['Teleconsultation'],
+        tags=['Appointments - Teleconsultation'],
         summary='Get session details',
         description='Get detailed information about a teleconsultation session',
         responses={
@@ -521,7 +579,7 @@ class LichHenViewSet(viewsets.ModelViewSet):
     ),
     update=extend_schema(
         operation_id='teleconsultation_sessions_update',
-        tags=['Teleconsultation'],
+        tags=['Appointments - Teleconsultation'],
         summary='Update session',
         description='Update teleconsultation session information',
         responses={
@@ -533,9 +591,23 @@ class LichHenViewSet(viewsets.ModelViewSet):
             500: OpenApiResponse(description='Internal server error')
         }
     ),
+    partial_update=extend_schema(
+        operation_id='teleconsultation_sessions_partial_update',
+        tags=['Appointments - Teleconsultation'],
+        summary='Partially update session',
+        description='Partially update teleconsultation session information',
+        responses={
+            200: OpenApiResponse(description='Session updated successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Doctor or Admin access required'),
+            404: OpenApiResponse(description='Session not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
     destroy=extend_schema(
         operation_id='teleconsultation_sessions_delete',
-        tags=['Teleconsultation'],
+        tags=['Appointments - Teleconsultation'],
         summary='Delete session',
         description='Delete a teleconsultation session',
         responses={
@@ -588,6 +660,20 @@ class PhienTuVanTuXaViewSet(viewsets.ModelViewSet):
         
         return queryset
     
+    @extend_schema(
+        operation_id='teleconsultation_start_session',
+        tags=['Appointments - Teleconsultation'],
+        summary='Start teleconsultation session',
+        description='Start a teleconsultation session',
+        responses={
+            200: OpenApiResponse(description='Session started successfully'),
+            400: OpenApiResponse(description='Session already started or ended'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Doctor or Admin access required'),
+            404: OpenApiResponse(description='Session not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    )
     @action(detail=True, methods=['post'])
     def start_session(self, request, pk=None):
         """Bắt đầu phiên tư vấn"""
@@ -607,6 +693,20 @@ class PhienTuVanTuXaViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(phien)
         return Response(serializer.data)
     
+    @extend_schema(
+        operation_id='teleconsultation_end_session',
+        tags=['Appointments - Teleconsultation'],
+        summary='End teleconsultation session',
+        description='End a teleconsultation session and update appointment status',
+        responses={
+            200: OpenApiResponse(description='Session ended successfully'),
+            400: OpenApiResponse(description='Session not started or already ended'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Doctor or Admin access required'),
+            404: OpenApiResponse(description='Session not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    )
     @action(detail=True, methods=['post'])
     def end_session(self, request, pk=None):
         """Kết thúc phiên tư vấn"""
