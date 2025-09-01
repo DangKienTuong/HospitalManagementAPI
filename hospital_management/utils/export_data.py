@@ -11,83 +11,184 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from users.models import BenhNhan
-from medical.models import CoSoYTe, BacSi, DichVu
-from appointments.models import LichHen
-from payments.models import ThanhToan
+
+try:
+    from users.models import BenhNhan
+    from medical.models import CoSoYTe, BacSi, DichVu
+    from appointments.models import LichHen
+    from payments.models import ThanhToan
+except ImportError as e:
+    print(f"Import error: {e}")
+    BenhNhan = None
+    CoSoYTe = None
+    BacSi = None
+    DichVu = None
+    LichHen = None
+    ThanhToan = None
 
 
 class DataExporter:
     """Lớp xử lý xuất dữ liệu ra file CSV/Excel/PDF"""
     
     @staticmethod
+    def make_datetime_naive(dt):
+        """Convert timezone-aware datetime to naive for Excel compatibility"""
+        if dt is None:
+            return None
+        if hasattr(dt, 'tzinfo') and dt.tzinfo is not None:
+            return dt.astimezone().replace(tzinfo=None)
+        return dt
+    
+    @staticmethod
     def export_benh_nhan_csv():
         """Xuất danh sách bệnh nhân ra file CSV"""
-        benh_nhan = BenhNhan.objects.select_related('ma_nguoi_dung').all()
-        
-        data = []
-        for bn in benh_nhan:
-            data.append({
-                'Mã bệnh nhân': bn.ma_benh_nhan,
-                'Họ tên': bn.ho_ten,
-                'Ngày sinh': bn.ngay_sinh,
-                'Giới tính': bn.gioi_tinh,
-                'Số điện thoại': bn.so_dien_thoai,
-                'Email': bn.email,
-                'Địa chỉ': bn.dia_chi,
-                'CMND/CCCD': bn.cmnd_cccd,
-                'Số BHYT': bn.so_bhyt,
-                'Ngày đăng ký': bn.ma_nguoi_dung.ngay_tao.strftime('%d/%m/%Y'),
-                'Trạng thái': 'Hoạt động' if bn.ma_nguoi_dung.trang_thai else 'Vô hiệu hóa'
-            })
-        
-        df = pd.DataFrame(data)
-        
-        response = HttpResponse(content_type='text/csv; charset=utf-8')
-        response['Content-Disposition'] = f'attachment; filename="danh_sach_benh_nhan_{timezone.now().strftime("%Y%m%d")}.csv"'
-        
-        # Add BOM for UTF-8 to ensure proper display in Excel
-        response.write('\ufeff')
-        df.to_csv(response, index=False, encoding='utf-8')
-        
-        return response
+        try:
+            if BenhNhan is None:
+                raise Exception("BenhNhan model is not available")
+            
+            benh_nhan = BenhNhan.objects.select_related('ma_nguoi_dung').all()
+            
+            data = []
+            for bn in benh_nhan:
+                try:
+                    data.append({
+                        'Mã bệnh nhân': bn.ma_benh_nhan,
+                        'Họ tên': bn.ho_ten,
+                        'Ngày sinh': bn.ngay_sinh.strftime('%d/%m/%Y') if bn.ngay_sinh else '',
+                        'Giới tính': bn.gioi_tinh,
+                        'Số điện thoại': bn.so_dien_thoai,
+                        'Email': bn.email or '',
+                        'Địa chỉ': bn.dia_chi,
+                        'CMND/CCCD': bn.cmnd_cccd or '',
+                        'Số BHYT': bn.so_bhyt or '',
+                        'Ngày đăng ký': bn.ma_nguoi_dung.ngay_tao.strftime('%d/%m/%Y %H:%M') if bn.ma_nguoi_dung and bn.ma_nguoi_dung.ngay_tao else '',
+                        'Trạng thái': 'Hoạt động' if bn.ma_nguoi_dung and bn.ma_nguoi_dung.trang_thai else 'Vô hiệu hóa'
+                    })
+                except AttributeError as e:
+                    # Skip records with missing data
+                    print(f"Skipping record due to missing data: {e}")
+                    continue
+            
+            if not data:
+                # Return empty CSV if no data
+                data = [{'Thông báo': 'Không có dữ liệu bệnh nhân'}]
+            
+            df = pd.DataFrame(data)
+            
+            # CSV export with proper Vietnamese encoding
+            csv_content = df.to_csv(index=False, sep=',', quoting=1)  # Quote all fields
+            
+            # Use Windows-1258 encoding specifically for Vietnamese
+            try:
+                # Try Windows-1258 (Vietnamese codepage)
+                encoded_content = csv_content.encode('windows-1258')
+                content_type = 'text/csv; charset=windows-1258'
+            except UnicodeEncodeError:
+                try:
+                    # Fallback to CP1252 (Western European)
+                    encoded_content = csv_content.encode('cp1252')
+                    content_type = 'text/csv; charset=cp1252'
+                except UnicodeEncodeError:
+                    # Final fallback: UTF-8 with BOM
+                    bom = '\ufeff'.encode('utf-8')
+                    encoded_content = bom + csv_content.encode('utf-8')
+                    content_type = 'text/csv; charset=utf-8'
+            
+            response = HttpResponse(
+                encoded_content,
+                content_type=content_type
+            )
+            response['Content-Disposition'] = f'attachment; filename="danh_sach_benh_nhan_{timezone.now().strftime("%Y%m%d")}.csv"'
+            
+            return response
+            
+        except Exception as e:
+            # Create error response
+            response = HttpResponse(content_type='text/csv; charset=utf-8')
+            response['Content-Disposition'] = f'attachment; filename="error_export_{timezone.now().strftime("%Y%m%d")}.csv"'
+            
+            error_data = pd.DataFrame([{'Lỗi': f'Không thể xuất dữ liệu: {str(e)}'}])
+            
+            output = io.BytesIO()
+            csv_string = error_data.to_csv(index=False, sep=';', encoding=None)
+            
+            output.write('\ufeff'.encode('utf-8'))
+            output.write(csv_string.encode('utf-8'))
+            
+            response.write(output.getvalue())
+            return response
     
     @staticmethod
     def export_benh_nhan_excel():
         """Xuất danh sách bệnh nhân ra file Excel"""
-        benh_nhan = BenhNhan.objects.select_related('ma_nguoi_dung').all()
-        
-        data = []
-        for bn in benh_nhan:
-            data.append({
-                'Mã bệnh nhân': bn.ma_benh_nhan,
-                'Họ tên': bn.ho_ten,
-                'Ngày sinh': bn.ngay_sinh,
-                'Giới tính': bn.gioi_tinh,
-                'Số điện thoại': bn.so_dien_thoai,
-                'Email': bn.email,
-                'Địa chỉ': bn.dia_chi,
-                'CMND/CCCD': bn.cmnd_cccd,
-                'Số BHYT': bn.so_bhyt,
-                'Ngày đăng ký': bn.ma_nguoi_dung.ngay_tao,
-                'Trạng thái': 'Hoạt động' if bn.ma_nguoi_dung.trang_thai else 'Vô hiệu hóa'
-            })
-        
-        df = pd.DataFrame(data)
-        
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df.to_excel(writer, sheet_name='Danh sách bệnh nhân', index=False)
-        
-        output.seek(0)
-        
-        response = HttpResponse(
-            output.getvalue(),
-            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
-        response['Content-Disposition'] = f'attachment; filename="danh_sach_benh_nhan_{timezone.now().strftime("%Y%m%d")}.xlsx"'
-        
-        return response
+        try:
+            if BenhNhan is None:
+                raise Exception("BenhNhan model is not available")
+                
+            benh_nhan = BenhNhan.objects.select_related('ma_nguoi_dung').all()
+            
+            data = []
+            for bn in benh_nhan:
+                try:
+                    # Convert timezone-aware datetime to timezone-naive for Excel compatibility
+                    ngay_dang_ky = DataExporter.make_datetime_naive(
+                        bn.ma_nguoi_dung.ngay_tao if bn.ma_nguoi_dung else None
+                    )
+                    
+                    data.append({
+                        'Mã bệnh nhân': bn.ma_benh_nhan,
+                        'Họ tên': bn.ho_ten,
+                        'Ngày sinh': bn.ngay_sinh,
+                        'Giới tính': bn.gioi_tinh,
+                        'Số điện thoại': bn.so_dien_thoai,
+                        'Email': bn.email or '',
+                        'Địa chỉ': bn.dia_chi,
+                        'CMND/CCCD': bn.cmnd_cccd or '',
+                        'Số BHYT': bn.so_bhyt or '',
+                        'Ngày đăng ký': ngay_dang_ky,
+                        'Trạng thái': 'Hoạt động' if bn.ma_nguoi_dung and bn.ma_nguoi_dung.trang_thai else 'Vô hiệu hóa'
+                    })
+                except AttributeError as e:
+                    # Skip records with missing data
+                    print(f"Skipping record due to missing data: {e}")
+                    continue
+            
+            if not data:
+                # Return Excel with message if no data
+                data = [{'Thông báo': 'Không có dữ liệu bệnh nhân'}]
+            
+            df = pd.DataFrame(data)
+            
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df.to_excel(writer, sheet_name='Danh sách bệnh nhân', index=False)
+            
+            output.seek(0)
+            
+            response = HttpResponse(
+                output.getvalue(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            response['Content-Disposition'] = f'attachment; filename="danh_sach_benh_nhan_{timezone.now().strftime("%Y%m%d")}.xlsx"'
+            
+            return response
+            
+        except Exception as e:
+            # Create error Excel file
+            output = io.BytesIO()
+            error_data = pd.DataFrame([{'Lỗi': f'Không thể xuất dữ liệu: {str(e)}'}])
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                error_data.to_excel(writer, sheet_name='Lỗi', index=False)
+            
+            output.seek(0)
+            
+            response = HttpResponse(
+                output.getvalue(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            response['Content-Disposition'] = f'attachment; filename="error_export_{timezone.now().strftime("%Y%m%d")}.xlsx"'
+            
+            return response
     
     @staticmethod
     def export_lich_hen_excel(start_date=None, end_date=None):
@@ -113,7 +214,7 @@ class DataExporter:
                 'Giờ khám': lh.gio_kham,
                 'Trạng thái': lh.trang_thai,
                 'Giá dịch vụ': lh.ma_dich_vu.gia_tien,
-                'Ngày tạo': lh.ngay_tao,
+                'Ngày tạo': DataExporter.make_datetime_naive(lh.ngay_tao),
                 'Ghi chú': lh.ghi_chu
             })
         
@@ -217,10 +318,12 @@ class DataExporter:
         # Doanh thu theo ngày
         doanh_thu_theo_ngay = {}
         for tt in queryset:
-            ngay = tt.thoi_gian_thanh_toan.date()
-            if ngay not in doanh_thu_theo_ngay:
+            thoi_gian = DataExporter.make_datetime_naive(tt.thoi_gian_thanh_toan)
+            ngay = thoi_gian.date() if thoi_gian else None
+            if ngay and ngay not in doanh_thu_theo_ngay:
                 doanh_thu_theo_ngay[ngay] = 0
-            doanh_thu_theo_ngay[ngay] += tt.so_tien
+            if ngay:
+                doanh_thu_theo_ngay[ngay] += tt.so_tien
         
         # Doanh thu theo dịch vụ
         doanh_thu_theo_dv = queryset.values(
@@ -248,7 +351,7 @@ class DataExporter:
                 ngay_data = []
                 for ngay, doanh_thu in sorted(doanh_thu_theo_ngay.items()):
                     ngay_data.append({
-                        'Ngày': ngay,
+                        'Ngày': ngay,  # This is already a date object, no timezone
                         'Doanh thu': doanh_thu
                     })
                 pd.DataFrame(ngay_data).to_excel(writer, sheet_name='Theo ngày', index=False)

@@ -26,7 +26,7 @@ The Hospital Management System API is designed to streamline healthcare operatio
 - **Medical Services**: Hospital, specialty, and doctor management
 - **Appointment Scheduling**: Advanced scheduling with availability management
 - **Payment Processing**: Integrated payment and billing system
-- **Import/Export**: Data import/export functionality for administrative tasks
+- **Data Export**: Data export functionality for administrative tasks
 - **API Documentation**: Complete Swagger/OpenAPI documentation
 - **Audit Trail**: Comprehensive logging and audit capabilities
 
@@ -116,7 +116,7 @@ The project follows **Clean Architecture** principles with clear separation of c
 - **Financial Reporting**: Payment history and analytics
 
 ### 📊 Data Management
-- **Import/Export**: Excel-based data import/export functionality
+- **Export**: Excel-based data export functionality
 - **Reporting**: Comprehensive reporting system
 - **Data Validation**: Robust input validation and sanitization
 
@@ -429,10 +429,8 @@ GET    /api/payments/{id}/       # Get payment details
 
 ### Utility Endpoints
 ```
-POST   /api/utils/import/benh-nhan/    # Import patients from Excel
-POST   /api/utils/import/bac-si/       # Import doctors from Excel
-GET    /api/utils/export/lich-hen/     # Export appointments to Excel
-GET    /api/utils/export/thong-ke/     # Export statistics
+GET    /api/utils/export/benh-nhan/    # Export patients to Excel/CSV
+GET    /api/utils/export/lich-hen/     # Export appointments to Excel/PDF
 ```
 
 ## 🔧 Core Modules
@@ -512,18 +510,17 @@ GET    /api/utils/export/thong-ke/     # Export statistics
 - Transaction history
 
 ### Utils Module
-**Purpose**: Provides utility functions for data import/export and administrative tasks.
+**Purpose**: Provides utility functions for data export and administrative tasks.
 
 **Key Components**:
-- **Import Views**: Excel-based data import functionality
-- **Export Views**: Data export to various formats
-- **Administrative Tools**: Bulk operations and data management
+- **Export Views**: Data export to various formats (Excel, CSV, PDF)
+- **Administrative Tools**: Data management and reporting
 
 **Key Features**:
-- Excel import/export
-- Bulk data operations
-- Statistical reporting
-- Data validation and cleansing
+- Excel/CSV/PDF export functionality
+- Patient data export
+- Appointment reporting
+- Data validation and formatting
 
 ### Core Module
 **Purpose**: Provides infrastructure components and shared functionality.
@@ -683,16 +680,14 @@ Authorization: Bearer <access_token>
 }
 ```
 
-### 5. Import/Export Data
+### 5. Export Data
 ```python
-# Import patients from Excel
-POST /api/utils/import/benh-nhan/
+# Export patients to Excel/CSV
+GET /api/utils/export/benh-nhan/?format=excel
 Authorization: Bearer <access_token>
-Content-Type: multipart/form-data
-file: <excel_file>
 
-# Export appointment statistics
-GET /api/utils/export/thong-ke/?from_date=2024-01-01&to_date=2024-01-31
+# Export appointment report to Excel/PDF
+GET /api/utils/export/lich-hen/?format=excel&start_date=2024-01-01&end_date=2024-01-31
 Authorization: Bearer <access_token>
 ```
 

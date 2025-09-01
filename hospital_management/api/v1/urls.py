@@ -41,5 +41,4 @@ app_name = 'api_v1'
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('utils/', include('utils.urls')),
 ]
