@@ -7,7 +7,9 @@ from django.utils import timezone
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
+from django.http import Http404
 from datetime import datetime, timedelta
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse
 import logging
 
 logger = logging.getLogger(__name__)
@@ -19,6 +21,66 @@ from .serializers import (
 from authentication.permissions import IsAdminUser, IsDoctorUser, IsPatientUser, IsDoctorOrAdmin
 
 
+@extend_schema_view(
+    list=extend_schema(
+        operation_id='schedules_list',
+        tags=['Work Schedules'],
+        summary='List work schedules',
+        description='Get list of doctor work schedules',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved schedules list'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+    create=extend_schema(
+        operation_id='schedules_create',
+        tags=['Work Schedules'],
+        summary='Create work schedule',
+        description='Create a new work schedule',
+        responses={
+            201: OpenApiResponse(description='Schedule created successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data or schedule conflict'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+    retrieve=extend_schema(
+        operation_id='schedules_retrieve',
+        tags=['Work Schedules'],
+        summary='Get schedule details',
+        description='Get detailed information about a work schedule',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved schedule'),
+            404: OpenApiResponse(description='Schedule not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+    update=extend_schema(
+        operation_id='schedules_update',
+        tags=['Work Schedules'],
+        summary='Update work schedule',
+        description='Update work schedule information',
+        responses={
+            200: OpenApiResponse(description='Schedule updated successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data or schedule conflict'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            404: OpenApiResponse(description='Schedule not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+    destroy=extend_schema(
+        operation_id='schedules_delete',
+        tags=['Work Schedules'],
+        summary='Delete work schedule',
+        description='Delete a work schedule',
+        responses={
+            204: OpenApiResponse(description='Schedule deleted successfully'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            404: OpenApiResponse(description='Schedule not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+)
 class LichLamViecViewSet(viewsets.ModelViewSet):
     queryset = LichLamViec.objects.select_related(
         'ma_bac_si__ma_nguoi_dung', 'ma_bac_si__ma_chuyen_khoa'
@@ -113,6 +175,86 @@ class LichLamViecViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        operation_id='appointments_list',
+        tags=['Appointments'],
+        summary='List appointments',
+        description='Get list of appointments',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved appointments list'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+    create=extend_schema(
+        operation_id='appointments_create',
+        tags=['Appointments'],
+        summary='Create appointment',
+        description='Create a new appointment',
+        responses={
+            201: OpenApiResponse(description='Appointment created successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data or appointment conflict'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Patient access required'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+    retrieve=extend_schema(
+        operation_id='appointments_retrieve',
+        tags=['Appointments'],
+        summary='Get appointment details',
+        description='Get detailed information about an appointment',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved appointment'),
+            404: OpenApiResponse(
+                description='Appointment not found',
+                examples={
+                    'application/json': {
+                        'error': 'Appointment with ma_lich_hen "123" does not exist',
+                        'error_code': 'APPOINTMENT_NOT_FOUND'
+                    }
+                }
+            ),
+            500: OpenApiResponse(
+                description='Internal server error',
+                examples={
+                    'application/json': {
+                        'error': 'Internal server error occurred while retrieving appointment',
+                        'error_code': 'INTERNAL_SERVER_ERROR'
+                    }
+                }
+            )
+        }
+    ),
+    update=extend_schema(
+        operation_id='appointments_update',
+        tags=['Appointments'],
+        summary='Update appointment',
+        description='Update appointment information',
+        responses={
+            200: OpenApiResponse(description='Appointment updated successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Doctor or Admin access required'),
+            404: OpenApiResponse(description='Appointment not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+    destroy=extend_schema(
+        operation_id='appointments_delete',
+        tags=['Appointments'],
+        summary='Delete appointment',
+        description='Delete an appointment',
+        responses={
+            204: OpenApiResponse(description='Appointment deleted successfully'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Doctor or Admin access required'),
+            404: OpenApiResponse(description='Appointment not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+)
 class LichHenViewSet(viewsets.ModelViewSet):
     queryset = LichHen.objects.select_related(
         'ma_benh_nhan', 'ma_bac_si', 'ma_dich_vu', 'ma_lich'
@@ -216,22 +358,29 @@ class LichHenViewSet(viewsets.ModelViewSet):
 
     def retrieve(self, request, *args, **kwargs):
         """Retrieve appointment with enhanced error handling"""
+        ma_lich_hen = kwargs.get('pk')
         try:
             instance = self.get_object()
             serializer = self.get_serializer(instance)
             logger.info(f"Retrieved appointment: {instance.ma_lich_hen}")
             return Response(serializer.data)
             
-        except LichHen.DoesNotExist:
-            logger.warning(f"Appointment not found with ID: {kwargs.get('pk')}")
+        except Http404:
+            logger.warning(f"Appointment not found with ma_lich_hen: {ma_lich_hen}")
             return Response(
-                {'error': 'Appointment not found'},
+                {
+                    'error': f'Appointment with ma_lich_hen "{ma_lich_hen}" does not exist',
+                    'error_code': 'APPOINTMENT_NOT_FOUND'
+                },
                 status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
             logger.error(f"Unexpected error retrieving appointment: {str(e)}")
             return Response(
-                {'error': 'Internal server error'},
+                {
+                    'error': 'Internal server error occurred while retrieving appointment',
+                    'error_code': 'INTERNAL_SERVER_ERROR'
+                },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
@@ -333,6 +482,71 @@ class LichHenViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        operation_id='teleconsultation_sessions_list',
+        tags=['Teleconsultation'],
+        summary='List teleconsultation sessions',
+        description='Get list of teleconsultation sessions',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved sessions list'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+    create=extend_schema(
+        operation_id='teleconsultation_sessions_create',
+        tags=['Teleconsultation'],
+        summary='Create teleconsultation session',
+        description='Create a new teleconsultation session',
+        responses={
+            201: OpenApiResponse(description='Session created successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Doctor or Admin access required'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+    retrieve=extend_schema(
+        operation_id='teleconsultation_sessions_retrieve',
+        tags=['Teleconsultation'],
+        summary='Get session details',
+        description='Get detailed information about a teleconsultation session',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved session'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            404: OpenApiResponse(description='Session not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+    update=extend_schema(
+        operation_id='teleconsultation_sessions_update',
+        tags=['Teleconsultation'],
+        summary='Update session',
+        description='Update teleconsultation session information',
+        responses={
+            200: OpenApiResponse(description='Session updated successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Doctor or Admin access required'),
+            404: OpenApiResponse(description='Session not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+    destroy=extend_schema(
+        operation_id='teleconsultation_sessions_delete',
+        tags=['Teleconsultation'],
+        summary='Delete session',
+        description='Delete a teleconsultation session',
+        responses={
+            204: OpenApiResponse(description='Session deleted successfully'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Doctor or Admin access required'),
+            404: OpenApiResponse(description='Session not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+)
 class PhienTuVanTuXaViewSet(viewsets.ModelViewSet):
     queryset = PhienTuVanTuXa.objects.select_related(
         'ma_lich_hen__ma_benh_nhan', 'ma_lich_hen__ma_bac_si'

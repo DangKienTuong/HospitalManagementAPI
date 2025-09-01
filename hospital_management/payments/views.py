@@ -3,20 +3,104 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
-from django.utils import timezone
-from django.db.models import Sum, Count
-from django.core.exceptions import ValidationError
-from django.db import IntegrityError
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse
+from django.http import Http404
 import logging
-
-logger = logging.getLogger(__name__)
+from django.db import IntegrityError
+from django.db.models import Sum
+from django.utils import timezone
+from rest_framework.exceptions import ValidationError
+from authentication.permissions import IsDoctorOrAdmin
 from .models import ThanhToan
 from .serializers import (
-    ThanhToanSerializer, ThanhToanCreateSerializer, ThanhToanUpdateStatusSerializer
+    ThanhToanSerializer,
+    ThanhToanCreateSerializer,
+    ThanhToanUpdateStatusSerializer,
 )
-from authentication.permissions import IsAdminUser, IsDoctorOrAdmin
 
+logger = logging.getLogger(__name__)
 
+@extend_schema_view(
+    list=extend_schema(
+        operation_id='payments_list',
+        tags=['Payments'],
+        summary='List payments',
+        description='Get list of payments',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved payments list'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+    create=extend_schema(
+        operation_id='payments_create',
+        tags=['Payments'],
+        summary='Create payment',
+        description='Create a new payment record',
+        responses={
+            201: OpenApiResponse(description='Payment created successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data provided'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Patient access required'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+    retrieve=extend_schema(
+        operation_id='payments_retrieve',
+        tags=['Payments'],
+        summary='Get payment details',
+        description='Get detailed information about a payment',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved payment'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            404: OpenApiResponse(
+                description='Payment not found with specified ma_thanh_toan',
+                examples={
+                    'application/json': {
+                        'error': 'Payment with ma_thanh_toan "123" does not exist',
+                        'error_code': 'PAYMENT_NOT_FOUND'
+                    }
+                }
+            ),
+            500: OpenApiResponse(
+                description='Internal server error',
+                examples={
+                    'application/json': {
+                        'error': 'Internal server error occurred while retrieving payment',
+                        'error_code': 'INTERNAL_SERVER_ERROR'
+                    }
+                }
+            )
+        }
+    ),
+    update=extend_schema(
+        operation_id='payments_update',
+        tags=['Payments'],
+        summary='Update payment',
+        description='Update payment information',
+        responses={
+            200: OpenApiResponse(description='Payment updated successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data provided'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Doctor or Admin access required'),
+            404: OpenApiResponse(description='Payment not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+    destroy=extend_schema(
+        operation_id='payments_delete',
+        tags=['Payments'],
+        summary='Delete payment',
+        description='Delete a payment record',
+        responses={
+            204: OpenApiResponse(description='Payment deleted successfully'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Doctor or Admin access required'),
+            404: OpenApiResponse(description='Payment not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+)
 class ThanhToanViewSet(viewsets.ModelViewSet):
     queryset = ThanhToan.objects.select_related(
         'ma_lich_hen__ma_benh_nhan', 'ma_lich_hen__ma_bac_si', 'ma_lich_hen__ma_dich_vu'
@@ -113,22 +197,29 @@ class ThanhToanViewSet(viewsets.ModelViewSet):
 
     def retrieve(self, request, *args, **kwargs):
         """Retrieve payment with enhanced error handling"""
+        ma_thanh_toan = kwargs.get('pk')
         try:
             instance = self.get_object()
             serializer = self.get_serializer(instance)
             logger.info(f"Retrieved payment: {instance.ma_thanh_toan}")
             return Response(serializer.data)
             
-        except ThanhToan.DoesNotExist:
-            logger.warning(f"Payment not found with ID: {kwargs.get('pk')}")
+        except Http404:
+            logger.warning(f"Payment not found with ma_thanh_toan: {ma_thanh_toan}")
             return Response(
-                {'error': 'Payment not found'},
+                {
+                    'error': f'Payment with ma_thanh_toan "{ma_thanh_toan}" does not exist',
+                    'error_code': 'PAYMENT_NOT_FOUND'
+                },
                 status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
             logger.error(f"Unexpected error retrieving payment: {str(e)}")
             return Response(
-                {'error': 'Internal server error'},
+                {
+                    'error': 'Internal server error occurred while retrieving payment',
+                    'error_code': 'INTERNAL_SERVER_ERROR'
+                },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     

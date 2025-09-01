@@ -6,6 +6,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
+from django.http import Http404
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse
 from drf_spectacular.openapi import OpenApiParameter, OpenApiTypes
 import logging
@@ -25,31 +26,79 @@ from authentication.permissions import IsAdminUser, IsDoctorOrAdmin
         operation_id='medical_facilities_list',
         tags=['Medical Facilities'],
         summary='List medical facilities',
-        description='Get list of medical facilities'
+        description='Get list of medical facilities',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved medical facilities list'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            500: OpenApiResponse(description='Internal server error')
+        }
     ),
     create=extend_schema(
         operation_id='medical_facilities_create',
         tags=['Medical Facilities'],
         summary='Create medical facility',
-        description='Create a new medical facility'
+        description='Create a new medical facility',
+        responses={
+            201: OpenApiResponse(description='Medical facility created successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data provided'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Admin access required'),
+            500: OpenApiResponse(description='Internal server error')
+        }
     ),
     retrieve=extend_schema(
         operation_id='medical_facilities_retrieve',
         tags=['Medical Facilities'],
         summary='Get medical facility details',
-        description='Get detailed information about a medical facility'
+        description='Get detailed information about a medical facility',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved medical facility information'),
+            404: OpenApiResponse(
+                description='Medical facility not found with specified ma_co_so',
+                examples={
+                    'application/json': {
+                        'error': 'Medical facility with ma_co_so "123" does not exist',
+                        'error_code': 'FACILITY_NOT_FOUND'
+                    }
+                }
+            ),
+            500: OpenApiResponse(
+                description='Internal server error',
+                examples={
+                    'application/json': {
+                        'error': 'Internal server error occurred while retrieving medical facility',
+                        'error_code': 'INTERNAL_SERVER_ERROR'
+                    }
+                }
+            )
+        }
     ),
     update=extend_schema(
         operation_id='medical_facilities_update',
         tags=['Medical Facilities'],
         summary='Update medical facility',
-        description='Update medical facility information'
+        description='Update medical facility information',
+        responses={
+            200: OpenApiResponse(description='Medical facility updated successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data provided'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Admin access required'),
+            404: OpenApiResponse(description='Medical facility not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
     ),
     destroy=extend_schema(
         operation_id='medical_facilities_delete',
         tags=['Medical Facilities'],
         summary='Delete medical facility',
-        description='Delete a medical facility'
+        description='Delete a medical facility',
+        responses={
+            204: OpenApiResponse(description='Medical facility deleted successfully'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Admin access required'),
+            404: OpenApiResponse(description='Medical facility not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
     ),
 )
 class CoSoYTeViewSet(viewsets.ModelViewSet):
@@ -108,22 +157,29 @@ class CoSoYTeViewSet(viewsets.ModelViewSet):
 
     def retrieve(self, request, *args, **kwargs):
         """Retrieve medical facility with enhanced error handling"""
+        ma_co_so = kwargs.get('pk')
         try:
             instance = self.get_object()
             serializer = self.get_serializer(instance)
             logger.info(f"Retrieved medical facility: {instance.ten}")
             return Response(serializer.data)
             
-        except CoSoYTe.DoesNotExist:
-            logger.warning(f"Medical facility not found with ID: {kwargs.get('pk')}")
+        except Http404:
+            logger.warning(f"Medical facility not found with ma_co_so: {ma_co_so}")
             return Response(
-                {'error': 'Medical facility not found'},
+                {
+                    'error': f'Medical facility with ma_co_so "{ma_co_so}" does not exist',
+                    'error_code': 'FACILITY_NOT_FOUND'
+                },
                 status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
             logger.error(f"Unexpected error retrieving medical facility: {str(e)}")
             return Response(
-                {'error': 'Internal server error'},
+                {
+                    'error': 'Internal server error occurred while retrieving medical facility',
+                    'error_code': 'INTERNAL_SERVER_ERROR'
+                },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -151,6 +207,85 @@ class CoSoYTeViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        operation_id='specialties_list',
+        tags=['Specialties'],
+        summary='List specialties',
+        description='Get list of medical specialties',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved specialties list'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+    create=extend_schema(
+        operation_id='specialties_create',
+        tags=['Specialties'],
+        summary='Create specialty',
+        description='Create a new medical specialty',
+        responses={
+            201: OpenApiResponse(description='Specialty created successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data provided'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Admin access required'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+    retrieve=extend_schema(
+        operation_id='specialties_retrieve',
+        tags=['Specialties'],
+        summary='Get specialty details',
+        description='Get detailed information about a specialty',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved specialty information'),
+            404: OpenApiResponse(
+                description='Specialty not found with specified ma_chuyen_khoa',
+                examples={
+                    'application/json': {
+                        'error': 'Specialty with ma_chuyen_khoa "123" does not exist',
+                        'error_code': 'SPECIALTY_NOT_FOUND'
+                    }
+                }
+            ),
+            500: OpenApiResponse(
+                description='Internal server error',
+                examples={
+                    'application/json': {
+                        'error': 'Internal server error occurred while retrieving specialty',
+                        'error_code': 'INTERNAL_SERVER_ERROR'
+                    }
+                }
+            )
+        }
+    ),
+    update=extend_schema(
+        operation_id='specialties_update',
+        tags=['Specialties'],
+        summary='Update specialty',
+        description='Update specialty information',
+        responses={
+            200: OpenApiResponse(description='Specialty updated successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data provided'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Admin access required'),
+            404: OpenApiResponse(description='Specialty not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+    destroy=extend_schema(
+        operation_id='specialties_delete',
+        tags=['Specialties'],
+        summary='Delete specialty',
+        description='Delete a specialty',
+        responses={
+            204: OpenApiResponse(description='Specialty deleted successfully'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Admin access required'),
+            404: OpenApiResponse(description='Specialty not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+)
 class ChuyenKhoaViewSet(viewsets.ModelViewSet):
     queryset = ChuyenKhoa.objects.select_related('ma_co_so').prefetch_related('bac_si', 'dich_vu').all()
     serializer_class = ChuyenKhoaSerializer
@@ -166,6 +301,34 @@ class ChuyenKhoaViewSet(viewsets.ModelViewSet):
         else:
             permission_classes = [IsAdminUser]
         return [permission() for permission in permission_classes]
+    
+    def retrieve(self, request, *args, **kwargs):
+        """Retrieve specialty with enhanced error handling"""
+        ma_chuyen_khoa = kwargs.get('pk')
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
+            logger.info(f"Retrieved specialty: {instance.ten_chuyen_khoa}")
+            return Response(serializer.data)
+            
+        except Http404:
+            logger.warning(f"Specialty not found with ma_chuyen_khoa: {ma_chuyen_khoa}")
+            return Response(
+                {
+                    'error': f'Specialty with ma_chuyen_khoa "{ma_chuyen_khoa}" does not exist',
+                    'error_code': 'SPECIALTY_NOT_FOUND'
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error retrieving specialty: {str(e)}")
+            return Response(
+                {
+                    'error': 'Internal server error occurred while retrieving specialty',
+                    'error_code': 'INTERNAL_SERVER_ERROR'
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     @action(detail=True, methods=['get'])
     def bac_si(self, request, pk=None):
@@ -189,31 +352,78 @@ class ChuyenKhoaViewSet(viewsets.ModelViewSet):
         operation_id='doctors_list',
         tags=['Doctors'],
         summary='List doctors',
-        description='Get list of doctors with filtering capabilities'
+        description='Get list of doctors with filtering capabilities',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved doctors list'),
+            500: OpenApiResponse(description='Internal server error')
+        }
     ),
     create=extend_schema(
         operation_id='doctors_create',
         tags=['Doctors'],
         summary='Create doctor',
-        description='Create a new doctor profile'
+        description='Create a new doctor profile',
+        responses={
+            201: OpenApiResponse(description='Doctor profile created successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data provided or data integrity violation'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Admin access required'),
+            500: OpenApiResponse(description='Internal server error')
+        }
     ),
     retrieve=extend_schema(
         operation_id='doctors_retrieve',
         tags=['Doctors'],
         summary='Get doctor details',
-        description='Get detailed information about a doctor'
+        description='Get detailed information about a doctor',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved doctor information'),
+            404: OpenApiResponse(
+                description='Doctor not found with specified ma_bac_si',
+                examples={
+                    'application/json': {
+                        'error': 'Doctor with ma_bac_si "9" does not exist',
+                        'error_code': 'DOCTOR_NOT_FOUND'
+                    }
+                }
+            ),
+            500: OpenApiResponse(
+                description='Internal server error',
+                examples={
+                    'application/json': {
+                        'error': 'Internal server error occurred while retrieving doctor',
+                        'error_code': 'INTERNAL_SERVER_ERROR'
+                    }
+                }
+            )
+        }
     ),
     update=extend_schema(
         operation_id='doctors_update',
         tags=['Doctors'],
         summary='Update doctor',
-        description='Update doctor information'
+        description='Update doctor information',
+        responses={
+            200: OpenApiResponse(description='Doctor information updated successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data provided'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Doctor or Admin access required'),
+            404: OpenApiResponse(description='Doctor not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
     ),
     destroy=extend_schema(
         operation_id='doctors_delete',
         tags=['Doctors'],
         summary='Delete doctor',
-        description='Delete a doctor profile'
+        description='Delete a doctor profile',
+        responses={
+            204: OpenApiResponse(description='Doctor profile deleted successfully'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Doctor or Admin access required'),
+            404: OpenApiResponse(description='Doctor not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
     ),
 )
 class BacSiViewSet(viewsets.ModelViewSet):
@@ -294,22 +504,29 @@ class BacSiViewSet(viewsets.ModelViewSet):
 
     def retrieve(self, request, *args, **kwargs):
         """Retrieve doctor with enhanced error handling"""
+        ma_bac_si = kwargs.get('pk')
         try:
             instance = self.get_object()
             serializer = self.get_serializer(instance)
             logger.info(f"Retrieved doctor: {instance.ma_bac_si}")
             return Response(serializer.data)
             
-        except BacSi.DoesNotExist:
-            logger.warning(f"Doctor not found with ID: {kwargs.get('pk')}")
+        except Http404:
+            logger.warning(f"Doctor not found with ma_bac_si: {ma_bac_si}")
             return Response(
-                {'error': 'Doctor not found'},
+                {
+                    'error': f'Doctor with ma_bac_si "{ma_bac_si}" does not exist',
+                    'error_code': 'DOCTOR_NOT_FOUND'
+                },
                 status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
             logger.error(f"Unexpected error retrieving doctor: {str(e)}")
             return Response(
-                {'error': 'Internal server error'},
+                {
+                    'error': 'Internal server error occurred while retrieving doctor',
+                    'error_code': 'INTERNAL_SERVER_ERROR'
+                },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
@@ -344,6 +561,85 @@ class BacSiViewSet(viewsets.ModelViewSet):
             )
 
 
+@extend_schema_view(
+    list=extend_schema(
+        operation_id='services_list',
+        tags=['Medical Services'],
+        summary='List medical services',
+        description='Get list of medical services',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved services list'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+    create=extend_schema(
+        operation_id='services_create',
+        tags=['Medical Services'],
+        summary='Create service',
+        description='Create a new medical service',
+        responses={
+            201: OpenApiResponse(description='Service created successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data provided'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Admin access required'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+    retrieve=extend_schema(
+        operation_id='services_retrieve',
+        tags=['Medical Services'],
+        summary='Get service details',
+        description='Get detailed information about a medical service',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved service information'),
+            404: OpenApiResponse(
+                description='Service not found with specified ma_dich_vu',
+                examples={
+                    'application/json': {
+                        'error': 'Service with ma_dich_vu "123" does not exist',
+                        'error_code': 'SERVICE_NOT_FOUND'
+                    }
+                }
+            ),
+            500: OpenApiResponse(
+                description='Internal server error',
+                examples={
+                    'application/json': {
+                        'error': 'Internal server error occurred while retrieving service',
+                        'error_code': 'INTERNAL_SERVER_ERROR'
+                    }
+                }
+            )
+        }
+    ),
+    update=extend_schema(
+        operation_id='services_update',
+        tags=['Medical Services'],
+        summary='Update service',
+        description='Update service information',
+        responses={
+            200: OpenApiResponse(description='Service updated successfully'),
+            400: OpenApiResponse(description='Bad request - Invalid data provided'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Admin access required'),
+            404: OpenApiResponse(description='Service not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+    destroy=extend_schema(
+        operation_id='services_delete',
+        tags=['Medical Services'],
+        summary='Delete service',
+        description='Delete a service',
+        responses={
+            204: OpenApiResponse(description='Service deleted successfully'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            403: OpenApiResponse(description='Forbidden - Admin access required'),
+            404: OpenApiResponse(description='Service not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    ),
+)
 class DichVuViewSet(viewsets.ModelViewSet):
     queryset = DichVu.objects.select_related('ma_co_so', 'ma_chuyen_khoa').all()
     serializer_class = DichVuSerializer
@@ -359,6 +655,34 @@ class DichVuViewSet(viewsets.ModelViewSet):
         else:
             permission_classes = [IsAdminUser]
         return [permission() for permission in permission_classes]
+    
+    def retrieve(self, request, *args, **kwargs):
+        """Retrieve service with enhanced error handling"""
+        ma_dich_vu = kwargs.get('pk')
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
+            logger.info(f"Retrieved service: {instance.ten_dich_vu}")
+            return Response(serializer.data)
+            
+        except Http404:
+            logger.warning(f"Service not found with ma_dich_vu: {ma_dich_vu}")
+            return Response(
+                {
+                    'error': f'Service with ma_dich_vu "{ma_dich_vu}" does not exist',
+                    'error_code': 'SERVICE_NOT_FOUND'
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error retrieving service: {str(e)}")
+            return Response(
+                {
+                    'error': 'Internal server error occurred while retrieving service',
+                    'error_code': 'INTERNAL_SERVER_ERROR'
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     @action(detail=False, methods=['get'])
     def tu_van_tu_xa(self, request):

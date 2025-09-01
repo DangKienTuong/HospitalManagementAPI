@@ -6,6 +6,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
+from django.http import Http404
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse
 from drf_spectacular.openapi import OpenApiParameter, OpenApiTypes
 import logging
@@ -68,7 +69,27 @@ from authentication.permissions import IsAdminUser, IsPatientUser, IsOwnerOrRead
         operation_id='patients_retrieve',
         tags=['Patients'],
         summary='Get patient details',
-        description='Get detailed information about a specific patient'
+        description='Get detailed information about a specific patient',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved patient information'),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            404: OpenApiResponse(
+                description='Patient not found',
+                examples={
+                    'application/json': {
+                        'error': 'Patient not found'
+                    }
+                }
+            ),
+            500: OpenApiResponse(
+                description='Internal server error',
+                examples={
+                    'application/json': {
+                        'error': 'Internal server error'
+                    }
+                }
+            )
+        }
     ),
     update=extend_schema(
         operation_id='patients_update',
@@ -190,7 +211,7 @@ class BenhNhanViewSet(viewsets.ModelViewSet):
             logger.info(f"Retrieved patient: {instance.ma_benh_nhan}")
             return Response(serializer.data)
             
-        except BenhNhan.DoesNotExist:
+        except Http404:
             logger.warning(f"Patient not found with ID: {kwargs.get('pk')}")
             return Response(
                 {'error': 'Patient not found'},
