@@ -7,9 +7,18 @@ from django.utils import timezone
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
+from django.db.models import (
+    Avg,
+    Count,
+    Q,
+    F,
+    ExpressionWrapper,
+    DurationField
+)
 from django.http import Http404
 from datetime import datetime, timedelta
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse
+from drf_spectacular.openapi import OpenApiParameter, OpenApiTypes
 import logging
 
 logger = logging.getLogger(__name__)
@@ -19,6 +28,7 @@ from .serializers import (
     PhienTuVanTuXaSerializer
 )
 from authentication.permissions import IsAdminUser, IsDoctorUser, IsPatientUser, IsDoctorOrAdmin
+from core.repositories import AppointmentRepository
 
 
 @extend_schema_view(
@@ -546,9 +556,49 @@ class LichHenViewSet(viewsets.ModelViewSet):
         lich_lam_viec = lich_hen.ma_lich
         lich_lam_viec.so_luong_da_dat = max(0, lich_lam_viec.so_luong_da_dat - 1)
         lich_lam_viec.save()
-        
+
         serializer = self.get_serializer(lich_hen)
         return Response(serializer.data)
+
+    @extend_schema(
+        operation_id='appointments_statistics',
+        tags=['Appointments - Bookings'],
+        summary='Get appointment statistics',
+        description='Get appointment statistics optionally filtered by date range',
+        parameters=[
+            OpenApiParameter(
+                name='start_date',
+                type=OpenApiTypes.DATE,
+                location=OpenApiParameter.QUERY,
+                description='Filter statistics from this date (YYYY-MM-DD)'
+            ),
+            OpenApiParameter(
+                name='end_date',
+                type=OpenApiTypes.DATE,
+                location=OpenApiParameter.QUERY,
+                description='Filter statistics up to this date (YYYY-MM-DD)'
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved appointment statistics'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    )
+    @action(detail=False, methods=['get'])
+    def statistics(self, request):
+        """Thống kê lịch hẹn"""
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+
+        try:
+            start = datetime.strptime(start_date, '%Y-%m-%d').date() if start_date else None
+            end = datetime.strptime(end_date, '%Y-%m-%d').date() if end_date else None
+        except ValueError:
+            return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        repo = AppointmentRepository()
+        stats = repo.get_appointment_statistics(start, end)
+        return Response(stats)
 
 
 @extend_schema_view(
@@ -737,6 +787,70 @@ class PhienTuVanTuXaViewSet(viewsets.ModelViewSet):
         # Cập nhật trạng thái lịch hẹn
         phien.ma_lich_hen.trang_thai = 'Hoan thanh'
         phien.ma_lich_hen.save()
-        
+
         serializer = self.get_serializer(phien)
         return Response(serializer.data)
+
+    @extend_schema(
+        operation_id='teleconsultation_statistics',
+        tags=['Appointments - Teleconsultation'],
+        summary='Get teleconsultation statistics',
+        description='Retrieve teleconsultation session statistics and average duration',
+        parameters=[
+            OpenApiParameter(
+                name='start_date',
+                type=OpenApiTypes.DATE,
+                location=OpenApiParameter.QUERY,
+                description='Filter statistics from this date (YYYY-MM-DD)'
+            ),
+            OpenApiParameter(
+                name='end_date',
+                type=OpenApiTypes.DATE,
+                location=OpenApiParameter.QUERY,
+                description='Filter statistics up to this date (YYYY-MM-DD)'
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved teleconsultation statistics'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    )
+    @action(detail=False, methods=['get'])
+    def statistics(self, request):
+        """Thống kê phiên tư vấn từ xa"""
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+
+        try:
+            start = datetime.strptime(start_date, '%Y-%m-%d').date() if start_date else None
+            end = datetime.strptime(end_date, '%Y-%m-%d').date() if end_date else None
+        except ValueError:
+            return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        queryset = self.get_queryset()
+        if start:
+            queryset = queryset.filter(thoi_gian_bat_dau__date__gte=start)
+        if end:
+            queryset = queryset.filter(thoi_gian_bat_dau__date__lte=end)
+
+        stats = queryset.aggregate(
+            total_sessions=Count('ma_phien'),
+            completed=Count('ma_phien', filter=Q(trang_thai='Da ket thuc')),
+            cancelled=Count('ma_phien', filter=Q(trang_thai='Da huy'))
+        )
+
+        duration_annotation = ExpressionWrapper(
+            F('thoi_gian_ket_thuc') - F('thoi_gian_bat_dau'),
+            output_field=DurationField()
+        )
+
+        avg_duration = queryset.filter(
+            thoi_gian_bat_dau__isnull=False,
+            thoi_gian_ket_thuc__isnull=False
+        ).annotate(duration=duration_annotation).aggregate(avg=Avg('duration'))['avg']
+
+        stats['average_duration_minutes'] = (
+            avg_duration.total_seconds() / 60 if avg_duration else 0
+        )
+
+        return Response(stats)

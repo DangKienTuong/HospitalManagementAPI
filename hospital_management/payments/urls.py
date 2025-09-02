@@ -7,4 +7,7 @@ router.register(r'thanh-toan', ThanhToanViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('statistics/',
+         ThanhToanViewSet.as_view({'get': 'statistics'}),
+         name='payment-statistics'),
 ]
