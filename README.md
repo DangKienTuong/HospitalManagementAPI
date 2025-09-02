@@ -606,6 +606,7 @@ GET    /api/appointments/schedule/ # Get doctor schedules
 GET    /api/payments/            # List payments
 POST   /api/payments/            # Process payment
 GET    /api/payments/{id}/       # Get payment details
+GET    /api/payments/{id}/invoice/   # Export payment invoice (PDF)
 ```
 
 ### Utility Endpoints

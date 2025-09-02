@@ -5,7 +5,10 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse
 from drf_spectacular.openapi import OpenApiParameter, OpenApiTypes
-from django.http import Http404
+from django.http import Http404, HttpResponse
+from django.conf import settings
+from io import BytesIO
+import os
 import logging
 from django.db import IntegrityError
 from django.db.models import Sum
@@ -13,6 +16,18 @@ from django.db.models.functions import TruncMonth
 from django.utils import timezone
 from datetime import datetime
 from rest_framework.exceptions import ValidationError
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle,
+)
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from authentication.permissions import IsDoctorOrAdmin
 from .models import ThanhToan
 from .serializers import (
@@ -243,7 +258,7 @@ class ThanhToanViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action == 'create':
             permission_classes = [permissions.IsAuthenticated]
-        elif self.action in ['list', 'retrieve']:
+        elif self.action in ['list', 'retrieve', 'export_invoice']:
             permission_classes = [permissions.IsAuthenticated]
         else:
             permission_classes = [IsDoctorOrAdmin]
@@ -339,9 +354,105 @@ class ThanhToanViewSet(viewsets.ModelViewSet):
         thanh_toan.thoi_gian_thanh_toan = timezone.now()
         thanh_toan.ma_giao_dich = request.data.get('ma_giao_dich', f"TXN_{int(timezone.now().timestamp())}")
         thanh_toan.save()
-        
+
         serializer = self.get_serializer(thanh_toan)
         return Response(serializer.data)
+
+    @extend_schema(
+        operation_id='payments_invoice',
+        tags=['Payments'],
+        summary='Export payment invoice',
+        description='Xuất hóa đơn thanh toán dưới dạng PDF',
+        responses={
+            200: OpenApiResponse(description='PDF generated successfully'),
+            404: OpenApiResponse(description='Payment not found'),
+            500: OpenApiResponse(description='Internal server error'),
+        },
+    )
+    @action(detail=True, methods=['get'], url_path='invoice')
+    def export_invoice(self, request, pk=None):
+        """Xuất hóa đơn thanh toán thành file PDF"""
+        thanh_toan = self.get_object()
+
+        buffer = BytesIO()
+        try:
+            font_path = os.path.join(
+                settings.BASE_DIR, 'utils', 'fonts', 'DejaVuSans.ttf'
+            )
+            if 'DejaVu' not in pdfmetrics.getRegisteredFontNames():
+                pdfmetrics.registerFont(TTFont('DejaVu', font_path))
+
+            doc = SimpleDocTemplate(buffer, pagesize=A4,
+                                    rightMargin=30, leftMargin=30,
+                                    topMargin=30, bottomMargin=30)
+
+            styles = getSampleStyleSheet()
+            styles['Normal'].fontName = 'DejaVu'
+            styles['Heading1'].fontName = 'DejaVu'
+            styles['Heading2'].fontName = 'DejaVu'
+            styles.add(
+                ParagraphStyle(
+                    name='TitleVN',
+                    fontName='DejaVu',
+                    fontSize=16,
+                    alignment=1,
+                    spaceAfter=20,
+                )
+            )
+
+            elements = [
+                Paragraph('BỆNH VIỆN ĐA KHOA XYZ', styles['Heading2']),
+                Paragraph('HÓA ĐƠN THANH TOÁN', styles['TitleVN']),
+                Spacer(1, 12),
+            ]
+
+            data = [
+                ['Mã thanh toán:', str(thanh_toan.ma_thanh_toan)],
+                ['Tên bệnh nhân:', thanh_toan.ma_lich_hen.ma_benh_nhan.ho_ten],
+                ['Bác sĩ phụ trách:', thanh_toan.ma_lich_hen.ma_bac_si.ho_ten],
+                ['Dịch vụ:', thanh_toan.ma_lich_hen.ma_dich_vu.ten_dich_vu],
+                ['Ngày khám:', thanh_toan.ma_lich_hen.ngay_kham.strftime('%d/%m/%Y')],
+                ['Giờ khám:', thanh_toan.ma_lich_hen.gio_kham.strftime('%H:%M')],
+                ['Phương thức thanh toán:', thanh_toan.phuong_thuc],
+                ['Trạng thái:', thanh_toan.trang_thai],
+                ['Số tiền:', f"{thanh_toan.so_tien:,.0f} VNĐ"],
+                [
+                    'Thời gian thanh toán:',
+                    thanh_toan.thoi_gian_thanh_toan.strftime('%d/%m/%Y %H:%M')
+                    if thanh_toan.thoi_gian_thanh_toan else ''
+                ],
+            ]
+
+            table = Table(data, colWidths=[160, 340])
+            table.setStyle(TableStyle([
+                ('GRID', (0, 0), (-1, -1), 0.25, colors.gray),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('FONTNAME', (0, 0), (-1, -1), 'DejaVu'),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.whitesmoke),
+            ]))
+
+            elements.append(table)
+            elements.append(Spacer(1, 24))
+            elements.append(Paragraph('Xin cảm ơn quý khách!', styles['Normal']))
+
+            doc.build(elements)
+
+            buffer.seek(0)
+            response = HttpResponse(buffer, content_type='application/pdf')
+            filename = f"hoa_don_{thanh_toan.ma_thanh_toan}.pdf"
+            response['Content-Disposition'] = (
+                f'attachment; filename="{filename}"'
+            )
+            return response
+
+        except Exception as e:
+            logger.error(
+                f"Error generating invoice for payment {thanh_toan.ma_thanh_toan}: {e}"
+            )
+            return Response(
+                {'error': 'Không thể tạo hóa đơn'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
     
     @extend_schema(
         operation_id='payments_statistics',
