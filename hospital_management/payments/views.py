@@ -372,28 +372,65 @@ class ThanhToanViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'], url_path='invoice')
     def export_invoice(self, request, pk=None):
         """Xuất hóa đơn thanh toán thành file PDF"""
-        thanh_toan = self.get_object()
-
-        buffer = BytesIO()
         try:
-            font_path = os.path.join(
-                settings.BASE_DIR, 'utils', 'fonts', 'DejaVuSans.ttf'
-            )
-            if 'DejaVu' not in pdfmetrics.getRegisteredFontNames():
-                pdfmetrics.registerFont(TTFont('DejaVu', font_path))
+            thanh_toan = self.get_object()
+            
+            # Validate required relationships exist
+            if not hasattr(thanh_toan, 'ma_lich_hen') or not thanh_toan.ma_lich_hen:
+                logger.error(f"Payment {pk} has no associated appointment")
+                return Response(
+                    {'error': 'Không tìm thấy thông tin lịch hẹn cho thanh toán này'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            
+            lich_hen = thanh_toan.ma_lich_hen
+            if not all([lich_hen.ma_benh_nhan, lich_hen.ma_bac_si, lich_hen.ma_dich_vu]):
+                logger.error(f"Payment {pk} has incomplete appointment data")
+                return Response(
+                    {'error': 'Thông tin lịch hẹn không đầy đủ để tạo hóa đơn'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            buffer = BytesIO()
+            
+            # Font setup with better error handling - using NotoSans for Vietnamese support
+            try:
+                # Try NotoSans first (better Vietnamese support)
+                noto_font_path = os.path.join(
+                    settings.BASE_DIR, 'utils', 'fonts', 'NotoSans-Regular.ttf'
+                )
+                if os.path.exists(noto_font_path):
+                    if 'NotoSans' not in pdfmetrics.getRegisteredFontNames():
+                        pdfmetrics.registerFont(TTFont('NotoSans', noto_font_path))
+                    font_name = 'NotoSans'
+                else:
+                    # Fallback to DejaVuSans
+                    font_path = os.path.join(
+                        settings.BASE_DIR, 'utils', 'fonts', 'DejaVuSans.ttf'
+                    )
+                    if os.path.exists(font_path):
+                        if 'DejaVu' not in pdfmetrics.getRegisteredFontNames():
+                            pdfmetrics.registerFont(TTFont('DejaVu', font_path))
+                        font_name = 'DejaVu'
+                    else:
+                        logger.error(f"Font files not found")
+                        font_name = 'Helvetica'
+            except Exception as font_error:
+                logger.warning(f"Font registration failed: {font_error}, using fallback font")
+                font_name = 'Helvetica'
 
             doc = SimpleDocTemplate(buffer, pagesize=A4,
                                     rightMargin=30, leftMargin=30,
                                     topMargin=30, bottomMargin=30)
 
             styles = getSampleStyleSheet()
-            styles['Normal'].fontName = 'DejaVu'
-            styles['Heading1'].fontName = 'DejaVu'
-            styles['Heading2'].fontName = 'DejaVu'
+            styles['Normal'].fontName = font_name
+            styles['Heading1'].fontName = font_name
+            styles['Heading2'].fontName = font_name
             styles.add(
                 ParagraphStyle(
                     name='TitleVN',
-                    fontName='DejaVu',
+                    fontName=font_name,
                     fontSize=16,
                     alignment=1,
                     spaceAfter=20,
@@ -406,28 +443,40 @@ class ThanhToanViewSet(viewsets.ModelViewSet):
                 Spacer(1, 12),
             ]
 
-            data = [
-                ['Mã thanh toán:', str(thanh_toan.ma_thanh_toan)],
-                ['Tên bệnh nhân:', thanh_toan.ma_lich_hen.ma_benh_nhan.ho_ten],
-                ['Bác sĩ phụ trách:', thanh_toan.ma_lich_hen.ma_bac_si.ho_ten],
-                ['Dịch vụ:', thanh_toan.ma_lich_hen.ma_dich_vu.ten_dich_vu],
-                ['Ngày khám:', thanh_toan.ma_lich_hen.ngay_kham.strftime('%d/%m/%Y')],
-                ['Giờ khám:', thanh_toan.ma_lich_hen.gio_kham.strftime('%H:%M')],
-                ['Phương thức thanh toán:', thanh_toan.phuong_thuc],
-                ['Trạng thái:', thanh_toan.trang_thai],
-                ['Số tiền:', f"{thanh_toan.so_tien:,.0f} VNĐ"],
-                [
-                    'Thời gian thanh toán:',
-                    thanh_toan.thoi_gian_thanh_toan.strftime('%d/%m/%Y %H:%M')
-                    if thanh_toan.thoi_gian_thanh_toan else ''
-                ],
-            ]
+            # Safe data extraction with error handling
+            try:
+                benh_nhan_name = getattr(lich_hen.ma_benh_nhan, 'ho_ten', 'N/A')
+                bac_si_name = getattr(lich_hen.ma_bac_si, 'ho_ten', 'N/A')
+                dich_vu_name = getattr(lich_hen.ma_dich_vu, 'ten_dich_vu', 'N/A')
+                ngay_kham = lich_hen.ngay_kham.strftime('%d/%m/%Y') if lich_hen.ngay_kham else 'N/A'
+                gio_kham = lich_hen.gio_kham.strftime('%H:%M') if lich_hen.gio_kham else 'N/A'
+                thoi_gian_tt = (thanh_toan.thoi_gian_thanh_toan.strftime('%d/%m/%Y %H:%M') 
+                               if thanh_toan.thoi_gian_thanh_toan else 'Chưa thanh toán')
+                
+                data = [
+                    ['Mã thanh toán:', str(thanh_toan.ma_thanh_toan)],
+                    ['Tên bệnh nhân:', benh_nhan_name],
+                    ['Bác sĩ phụ trách:', bac_si_name],
+                    ['Dịch vụ:', dich_vu_name],
+                    ['Ngày khám:', ngay_kham],
+                    ['Giờ khám:', gio_kham],
+                    ['Phương thức thanh toán:', thanh_toan.phuong_thuc or 'N/A'],
+                    ['Trạng thái:', thanh_toan.trang_thai or 'N/A'],
+                    ['Số tiền:', f"{thanh_toan.so_tien:,.0f} VNĐ" if thanh_toan.so_tien else '0 VNĐ'],
+                    ['Thời gian thanh toán:', thoi_gian_tt],
+                ]
+            except Exception as data_error:
+                logger.error(f"Error extracting data for invoice {pk}: {data_error}")
+                return Response(
+                    {'error': 'Lỗi khi trích xuất dữ liệu để tạo hóa đơn'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
 
             table = Table(data, colWidths=[160, 340])
             table.setStyle(TableStyle([
                 ('GRID', (0, 0), (-1, -1), 0.25, colors.gray),
                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('FONTNAME', (0, 0), (-1, -1), 'DejaVu'),
+                ('FONTNAME', (0, 0), (-1, -1), font_name),
                 ('BACKGROUND', (0, 0), (-1, 0), colors.whitesmoke),
             ]))
 
@@ -443,14 +492,19 @@ class ThanhToanViewSet(viewsets.ModelViewSet):
             response['Content-Disposition'] = (
                 f'attachment; filename="{filename}"'
             )
+            logger.info(f"Successfully generated invoice for payment {thanh_toan.ma_thanh_toan}")
             return response
 
-        except Exception as e:
-            logger.error(
-                f"Error generating invoice for payment {thanh_toan.ma_thanh_toan}: {e}"
-            )
+        except Http404:
+            logger.warning(f"Payment not found with ID: {pk}")
             return Response(
-                {'error': 'Không thể tạo hóa đơn'},
+                {'error': f'Không tìm thấy thanh toán với ID {pk}'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error generating invoice for payment {pk}: {str(e)}")
+            return Response(
+                {'error': 'Không thể tạo hóa đơn', 'details': str(e) if settings.DEBUG else 'Internal server error'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
     
