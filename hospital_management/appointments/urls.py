@@ -16,7 +16,4 @@ urlpatterns = [
     path('lich-hen/statistics/',
          LichHenViewSet.as_view({'get': 'statistics'}),
          name='appointment-statistics'),
-    path('teleconsultations/statistics/',
-         PhienTuVanTuXaViewSet.as_view({'get': 'statistics'}),
-         name='teleconsultation-statistics'),
 ]

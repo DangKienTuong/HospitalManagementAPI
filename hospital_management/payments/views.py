@@ -372,7 +372,7 @@ class ThanhToanViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def statistics(self, request):
         """Thống kê thanh toán"""
-        if request.user.vai_tro != 'Quan tri vien':
+        if request.user.vai_tro != 'Admin':
             return Response(
                 {'error': 'Chỉ admin mới có thể xem thống kê'},
                 status=status.HTTP_403_FORBIDDEN
