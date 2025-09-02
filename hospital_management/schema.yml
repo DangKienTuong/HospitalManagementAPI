@@ -2453,6 +2453,29 @@ paths:
           description: Payment not found
         '500':
           description: Internal server error
+  /api/payments/thanh-toan/{ma_thanh_toan}/invoice/:
+    get:
+      operationId: payments_invoice
+      description: Export payment invoice as PDF
+      summary: Export payment invoice
+      parameters:
+      - in: path
+        name: ma_thanh_toan
+        schema:
+          type: integer
+        description: A unique integer value identifying this Thanh toan.
+        required: true
+      tags:
+      - Payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: PDF generated successfully
+        '404':
+          description: Payment not found
+        '500':
+          description: Internal server error
   /api/payments/thanh-toan/{ma_thanh_toan}/update_status/:
     patch:
       operationId: payments_update_status
