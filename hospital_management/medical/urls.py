@@ -10,4 +10,7 @@ router.register(r'dich-vu', DichVuViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('doctors/<int:pk>/statistics/',
+         BacSiViewSet.as_view({'get': 'statistics'}),
+         name='doctor-statistics'),
 ]

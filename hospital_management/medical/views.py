@@ -15,9 +15,10 @@ logger = logging.getLogger(__name__)
 
 from .models import CoSoYTe, ChuyenKhoa, BacSi, DichVu
 from .serializers import (
-    CoSoYTeSerializer, ChuyenKhoaSerializer, BacSiSerializer, 
+    CoSoYTeSerializer, ChuyenKhoaSerializer, BacSiSerializer,
     BacSiCreateSerializer, DichVuSerializer
 )
+from core.repositories import DoctorRepository
 from authentication.permissions import IsAdminUser, IsDoctorOrAdmin
 
 
@@ -524,7 +525,7 @@ class BacSiViewSet(viewsets.ModelViewSet):
     ordering = ['ho_ten']
     
     def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
+        if self.action in ['list', 'retrieve', 'statistics']:
             permission_classes = [permissions.AllowAny]
         elif self.action == 'create':
             permission_classes = [IsAdminUser]
@@ -665,9 +666,29 @@ class BacSiViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         except BacSi.DoesNotExist:
             return Response(
-                {'error': 'Không tìm thấy thông tin bác sĩ'}, 
+                {'error': 'Không tìm thấy thông tin bác sĩ'},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+    @extend_schema(
+        operation_id='doctor_statistics',
+        tags=['Doctors'],
+        summary='Get doctor statistics',
+        description='Retrieve statistics for a specific doctor',
+        responses={
+            200: OpenApiResponse(description='Successfully retrieved doctor statistics'),
+            404: OpenApiResponse(description='Doctor not found'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    )
+    @action(detail=True, methods=['get'])
+    def statistics(self, request, pk=None):
+        """Thống kê hiệu suất của bác sĩ"""
+        repo = DoctorRepository()
+        stats = repo.get_doctor_statistics(pk)
+        if not stats:
+            return Response({'error': 'Doctor not found'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(stats)
 
 
 @extend_schema_view(

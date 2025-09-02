@@ -117,6 +117,12 @@ The project follows **Clean Architecture** principles with clear separation of c
 - **Payment Processing**: Multiple payment method support
 - **Financial Reporting**: Payment history and analytics
 
+### 📈 Analytics & Statistics
+- **Appointment Insights**: Aggregated counts and completion rates
+- **Doctor Performance**: Productivity metrics and schedule utilization
+- **Revenue Breakdown**: Earnings by service and month
+- **Teleconsultation Analytics**: Session outcomes and average durations
+
 ### 📊 Data Management
 - **Export**: Excel-based data export functionality
 - **Reporting**: Comprehensive reporting system
@@ -879,4 +885,23 @@ GET /api/health/
         "external_apis": "healthy"
     }
 }
+```
+
+### 7. Analytics & Statistics
+```python
+# Appointment statistics with optional date range
+GET /api/appointments/lich-hen/statistics/?start_date=2024-01-01&end_date=2024-01-31
+Authorization: Bearer <access_token>
+
+# Doctor performance metrics
+GET /api/medical/doctors/1/statistics/
+Authorization: Bearer <access_token>
+
+# Payment revenue breakdown
+GET /api/payments/statistics/?start_date=2024-01-01&end_date=2024-01-31
+Authorization: Bearer <admin_token>
+
+# Teleconsultation session analytics
+GET /api/appointments/teleconsultations/statistics/?start_date=2024-01-01&end_date=2024-01-31
+Authorization: Bearer <access_token>
 ```

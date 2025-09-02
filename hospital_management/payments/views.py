@@ -4,11 +4,14 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse
+from drf_spectacular.openapi import OpenApiParameter, OpenApiTypes
 from django.http import Http404
 import logging
 from django.db import IntegrityError
 from django.db.models import Sum
+from django.db.models.functions import TruncMonth
 from django.utils import timezone
+from datetime import datetime
 from rest_framework.exceptions import ValidationError
 from authentication.permissions import IsDoctorOrAdmin
 from .models import ThanhToan
@@ -345,6 +348,20 @@ class ThanhToanViewSet(viewsets.ModelViewSet):
         tags=['Payments'],
         summary='Get payment statistics',
         description='Get payment statistics (Admin only)',
+        parameters=[
+            OpenApiParameter(
+                name='start_date',
+                type=OpenApiTypes.DATE,
+                location=OpenApiParameter.QUERY,
+                description='Filter statistics from this date (YYYY-MM-DD)'
+            ),
+            OpenApiParameter(
+                name='end_date',
+                type=OpenApiTypes.DATE,
+                location=OpenApiParameter.QUERY,
+                description='Filter statistics up to this date (YYYY-MM-DD)'
+            ),
+        ],
         responses={
             200: OpenApiResponse(description='Successfully retrieved payment statistics'),
             401: OpenApiResponse(description='Unauthorized - Authentication required'),
@@ -357,27 +374,57 @@ class ThanhToanViewSet(viewsets.ModelViewSet):
         """Thống kê thanh toán"""
         if request.user.vai_tro != 'Quan tri vien':
             return Response(
-                {'error': 'Chỉ admin mới có thể xem thống kê'}, 
+                {'error': 'Chỉ admin mới có thể xem thống kê'},
                 status=status.HTTP_403_FORBIDDEN
             )
-        
+
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+
+        try:
+            start = datetime.strptime(start_date, '%Y-%m-%d').date() if start_date else None
+            end = datetime.strptime(end_date, '%Y-%m-%d').date() if end_date else None
+        except ValueError:
+            return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        queryset = self.queryset
+        if start:
+            queryset = queryset.filter(thoi_gian_thanh_toan__date__gte=start)
+        if end:
+            queryset = queryset.filter(thoi_gian_thanh_toan__date__lte=end)
+
         stats = {
-            'tong_so_thanh_toan': self.queryset.count(),
-            'da_thanh_toan': self.queryset.filter(trang_thai='Da thanh toan').count(),
-            'chua_thanh_toan': self.queryset.filter(trang_thai='Chua thanh toan').count(),
-            'da_hoan_tien': self.queryset.filter(trang_thai='Da hoan tien').count(),
-            'tong_doanh_thu': self.queryset.filter(
+            'tong_so_thanh_toan': queryset.count(),
+            'da_thanh_toan': queryset.filter(trang_thai='Da thanh toan').count(),
+            'chua_thanh_toan': queryset.filter(trang_thai='Chua thanh toan').count(),
+            'da_hoan_tien': queryset.filter(trang_thai='Da hoan tien').count(),
+            'tong_doanh_thu': queryset.filter(
                 trang_thai='Da thanh toan'
             ).aggregate(total=Sum('so_tien'))['total'] or 0,
-            'theo_phuong_thuc': {}
+            'theo_phuong_thuc': {},
+            'theo_dich_vu': {},
+            'theo_thang': {},
         }
-        
-        # Thống kê theo phương thức thanh toán
+
         for choice in ThanhToan.PHUONG_THUC_CHOICES:
             method = choice[0]
-            count = self.queryset.filter(
+            count = queryset.filter(
                 phuong_thuc=method, trang_thai='Da thanh toan'
             ).count()
             stats['theo_phuong_thuc'][method] = count
-        
+
+        service_stats = queryset.filter(trang_thai='Da thanh toan').values(
+            'ma_lich_hen__ma_dich_vu'
+        ).annotate(total=Sum('so_tien'))
+        for item in service_stats:
+            key = str(item['ma_lich_hen__ma_dich_vu'])
+            stats['theo_dich_vu'][key] = float(item['total'])
+
+        month_stats = queryset.filter(trang_thai='Da thanh toan').annotate(
+            thang=TruncMonth('thoi_gian_thanh_toan')
+        ).values('thang').annotate(total=Sum('so_tien')).order_by('thang')
+        for item in month_stats:
+            key = item['thang'].strftime('%Y-%m') if item['thang'] else None
+            stats['theo_thang'][key] = float(item['total']) if key else 0
+
         return Response(stats)

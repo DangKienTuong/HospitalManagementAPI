@@ -4,7 +4,7 @@ Handles data access for medical facilities, doctors, and services.
 """
 
 from typing import Optional, List, Dict, Any
-from django.db.models import Q, QuerySet, Count, Avg
+from django.db.models import Q, QuerySet, Count, Avg, Sum
 from .base import BaseRepository, CachedRepository
 import logging
 
@@ -216,7 +216,7 @@ class DoctorRepository(CachedRepository):
         Returns:
             Dictionary with doctor statistics
         """
-        from appointments.models import LichHen
+        from appointments.models import LichHen, LichLamViec
         
         try:
             doctor = self.get_by_id(doctor_id)
@@ -228,6 +228,16 @@ class DoctorRepository(CachedRepository):
                 completed=Count('ma_lich_hen', filter=Q(trang_thai='Hoan thanh')),
                 cancelled=Count('ma_lich_hen', filter=Q(trang_thai='Da huy'))
             )
+
+            schedule_stats = LichLamViec.objects.filter(ma_bac_si_id=doctor_id).aggregate(
+                total_slots=Sum('so_luong_kham'),
+                booked_slots=Sum('so_luong_da_dat')
+            )
+
+            utilization_rate = (
+                schedule_stats['booked_slots'] / schedule_stats['total_slots'] * 100
+                if schedule_stats['total_slots'] else 0
+            )
             
             return {
                 'doctor_name': doctor.ho_ten,
@@ -235,8 +245,9 @@ class DoctorRepository(CachedRepository):
                 'total_appointments': stats['total_appointments'],
                 'completed_appointments': stats['completed'],
                 'cancelled_appointments': stats['cancelled'],
-                'completion_rate': (stats['completed'] / stats['total_appointments'] * 100) 
-                                  if stats['total_appointments'] > 0 else 0
+                'completion_rate': (stats['completed'] / stats['total_appointments'] * 100)
+                                  if stats['total_appointments'] > 0 else 0,
+                'utilization_rate': utilization_rate
             }
         except Exception as e:
             logger.error(f"Error getting doctor statistics: {str(e)}")
