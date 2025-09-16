@@ -212,3 +212,5 @@ __marimo__/
 /.idea/inspectionProfiles/profiles_settings.xml
 /query
 /.idea/vcs.xml
+/.idea/copilot.data.migration.agent.xml
+/.idea/copilot.data.migration.edit.xml
