@@ -487,11 +487,41 @@ python manage.py migrate
 python manage.py createsuperuser
 ```
 
-#### 8. Load Test Data (Optional)
-```bash
-# Run test data script
-python database/set_passwords.py
+#### 8. Set Test User Passwords (Optional)
+If you loaded test data in step 5, you need to set proper Django hashed passwords for the test users:
 
+**Note for Windows PowerShell users:** The standard Linux command won't work on Windows PowerShell.
+
+**On Windows PowerShell:**
+```powershell
+# Navigate to the Django project directory (where manage.py is located)
+cd hospital_management
+
+# Run the password script using PowerShell syntax
+Get-Content ../database/set_passwords.py | python manage.py shell
+```
+
+**On Linux/macOS/Git Bash:**
+```bash
+# Navigate to the Django project directory (where manage.py is located)
+cd hospital_management
+
+# Run the password script using shell redirection
+python manage.py shell < ../database/set_passwords.py
+```
+
+**What this script does:**
+- Sets password `password123` for all test users
+- Updates 25 users: 2 Admins, 8 Doctors, 12 Patients, 3 Staff members
+- Converts plain text passwords to Django's secure hashed format
+
+**Alternative method (if above doesn't work):**
+```bash
+# Start Django shell manually
+python manage.py shell
+
+# Then copy and paste the content of database/set_passwords.py
+# Or run: exec(open('../database/set_passwords.py').read())
 ```
 
 #### 9. Run Development Server
