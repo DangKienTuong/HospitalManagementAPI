@@ -600,6 +600,199 @@ class LichHenViewSet(viewsets.ModelViewSet):
         stats = repo.get_appointment_statistics(start, end)
         return Response(stats)
 
+    @extend_schema(
+        operation_id='appointments_upcoming',
+        tags=['Appointments - Bookings'],
+        summary='Get upcoming appointments',
+        description='Get a list of upcoming appointments within a specified number of days',
+        parameters=[
+            OpenApiParameter(
+                name='days',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Number of days to look ahead (default: 7)',
+                required=False
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(
+                description='Successfully retrieved upcoming appointments',
+                examples={
+                    'application/json': {
+                        'count': 2,
+                        'results': [
+                            {
+                                'ma_lich_hen': 1,
+                                'ngay_kham': '2025-09-20',
+                                'gio_kham': '09:00:00',
+                                'ten_benh_nhan': 'Nguyễn Văn A',
+                                'ten_bac_si': 'BS. Trần Thị B',
+                                'ten_dich_vu': 'Khám tổng quát',
+                                'trang_thai': 'Da xac nhan'
+                            }
+                        ]
+                    }
+                }
+            ),
+            400: OpenApiResponse(description='Invalid days parameter'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    )
+    @action(detail=False, methods=['get'])
+    def upcoming(self, request):
+        """Lấy danh sách các lịch hẹn sắp tới trong một khoảng thời gian nhất định."""
+        try:
+            # Lấy tham số days từ query params, mặc định là 7
+            days_param = request.query_params.get('days', '7')
+            try:
+                days = int(days_param)
+                if days < 1:
+                    return Response(
+                        {'error': 'Parameter "days" must be a positive integer'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            except ValueError:
+                return Response(
+                    {'error': 'Parameter "days" must be a valid integer'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            repo = AppointmentRepository()
+            upcoming_appointments = repo.find_upcoming(days=days)
+
+            if not upcoming_appointments.exists():
+                logger.info(f"No upcoming appointments found within {days} days")
+                return Response(
+                    {
+                        'count': 0,
+                        'results': [],
+                        'message': f'No upcoming appointments found within {days} days'
+                    },
+                    status=status.HTTP_200_OK
+                )
+
+            user = request.user
+            filtered_queryset = upcoming_appointments
+
+            if user.is_authenticated:
+                if user.vai_tro == 'Bệnh nhân':
+                    from users.models import BenhNhan
+                    try:
+                        benh_nhan = BenhNhan.objects.get(ma_nguoi_dung=user)
+                        filtered_queryset = upcoming_appointments.filter(ma_benh_nhan=benh_nhan)
+                    except BenhNhan.DoesNotExist:
+                        filtered_queryset = upcoming_appointments.none()
+                elif user.vai_tro == 'Bác sĩ':
+                    from medical.models import BacSi
+                    try:
+                        bac_si = BacSi.objects.get(ma_nguoi_dung=user)
+                        filtered_queryset = upcoming_appointments.filter(ma_bac_si=bac_si)
+                    except BacSi.DoesNotExist:
+                        filtered_queryset = upcoming_appointments.none()
+
+            serializer = self.get_serializer(filtered_queryset, many=True)
+
+            logger.info(f"Retrieved {len(serializer.data)} upcoming appointments within {days} days")
+
+            return Response({
+                'count': len(serializer.data),
+                'results': serializer.data,
+                'days': days,
+                'message': f'Found {len(serializer.data)} upcoming appointments within {days} days'
+            })
+
+        except Exception as e:
+            logger.error(f"Unexpected error in upcoming appointments: {str(e)}")
+            return Response(
+                {'error': 'Internal server error'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @extend_schema(
+        operation_id='appointments_overdue',
+        tags=['Appointments - Bookings'],
+        summary='Get overdue appointments',
+        description='Get a list of overdue appointments that are past due date but still pending confirmation',
+        responses={
+            200: OpenApiResponse(
+                description='Successfully retrieved overdue appointments',
+                examples={
+                    'application/json': {
+                        'count': 3,
+                        'results': [
+                            {
+                                'ma_lich_hen': 5,
+                                'ngay_kham': '2025-09-18',
+                                'gio_kham': '14:00:00',
+                                'ten_benh_nhan': 'Nguyễn Văn C',
+                                'ten_bac_si': 'BS. Trần Thị D',
+                                'ten_dich_vu': 'Khám chuyên khoa',
+                                'trang_thai': 'Cho xac nhan'
+                            }
+                        ],
+                        'message': 'Found 3 overdue appointments'
+                    }
+                }
+            ),
+            401: OpenApiResponse(description='Unauthorized - Authentication required'),
+            500: OpenApiResponse(description='Internal server error')
+        }
+    )
+    @action(detail=False, methods=['get'])
+    def overdue(self, request):
+        """Lấy danh sách các lịch hẹn đã quá hạn."""
+        try:
+            # Sử dụng AppointmentRepository để lấy overdue appointments
+            repo = AppointmentRepository()
+            overdue_appointments = repo.find_overdue()
+
+            if not overdue_appointments.exists():
+                logger.info("No overdue appointments found")
+                return Response(
+                    {
+                        'count': 0,
+                        'results': [],
+                        'message': 'No overdue appointments found'
+                    },
+                    status=status.HTTP_200_OK
+                )
+
+            user = request.user
+            filtered_queryset = overdue_appointments
+
+            if user.is_authenticated:
+                if user.vai_tro == 'Bệnh nhân':
+                    from users.models import BenhNhan
+                    try:
+                        benh_nhan = BenhNhan.objects.get(ma_nguoi_dung=user)
+                        filtered_queryset = overdue_appointments.filter(ma_benh_nhan=benh_nhan)
+                    except BenhNhan.DoesNotExist:
+                        filtered_queryset = overdue_appointments.none()
+                elif user.vai_tro == 'Bác sĩ':
+                    from medical.models import BacSi
+                    try:
+                        bac_si = BacSi.objects.get(ma_nguoi_dung=user)
+                        filtered_queryset = overdue_appointments.filter(ma_bac_si=bac_si)
+                    except BacSi.DoesNotExist:
+                        filtered_queryset = overdue_appointments.none()
+
+            serializer = self.get_serializer(filtered_queryset, many=True)
+
+            logger.info(f"Retrieved {len(serializer.data)} overdue appointments")
+
+            return Response({
+                'count': len(serializer.data),
+                'results': serializer.data,
+                'message': f'Found {len(serializer.data)} overdue appointments'
+            })
+
+        except Exception as e:
+            logger.error(f"Unexpected error in overdue appointments: {str(e)}")
+            return Response(
+                {'error': 'Internal server error'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 
 @extend_schema_view(
     list=extend_schema(
