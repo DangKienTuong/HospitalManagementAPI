@@ -141,6 +141,108 @@ class AppointmentRepository(CachedRepository):
         
         return not existing
     
+    def check_patient_conflict(self, patient_id: int, appointment_date: date, 
+                              appointment_time: Any, exclude_id: int = None) -> bool:
+        """
+        Check if patient has conflicting appointments.
+        
+        Args:
+            patient_id: Patient ID
+            appointment_date: Appointment date
+            appointment_time: Appointment time
+            exclude_id: Appointment ID to exclude from check (for updates)
+            
+        Returns:
+            True if conflict exists, False otherwise
+        """
+        queryset = self.get_all(
+            ma_benh_nhan_id=patient_id,
+            ngay_kham=appointment_date,
+            gio_kham=appointment_time,
+            trang_thai__in=['Cho xac nhan', 'Da xac nhan']
+        )
+        
+        if exclude_id:
+            queryset = queryset.exclude(pk=exclude_id)
+            
+        return queryset.exists()
+    
+    def get_patient_appointments_by_date(self, patient_id: int, appointment_date: date) -> QuerySet:
+        """
+        Get all patient appointments for a specific date.
+        
+        Args:
+            patient_id: Patient ID
+            appointment_date: Appointment date
+            
+        Returns:
+            QuerySet of patient appointments
+        """
+        return self.get_all(
+            ma_benh_nhan_id=patient_id,
+            ngay_kham=appointment_date,
+            trang_thai__in=['Cho xac nhan', 'Da xac nhan']
+        ).order_by('gio_kham')
+    
+    def check_appointment_time_buffer(self, patient_id: int, appointment_date: date,
+                                    appointment_time: Any, buffer_minutes: int = 30,
+                                    exclude_id: int = None) -> tuple:
+        """
+        Check if appointment conflicts with time buffer.
+        
+        Args:
+            patient_id: Patient ID
+            appointment_date: Appointment date
+            appointment_time: Appointment time
+            buffer_minutes: Buffer time in minutes
+            exclude_id: Appointment ID to exclude from check
+            
+        Returns:
+            Tuple (has_conflict: bool, conflicting_appointment_time: str)
+        """
+        from datetime import datetime, timedelta
+        
+        appointments = self.get_patient_appointments_by_date(patient_id, appointment_date)
+        
+        if exclude_id:
+            appointments = appointments.exclude(pk=exclude_id)
+        
+        target_datetime = datetime.combine(appointment_date, appointment_time)
+        buffer_delta = timedelta(minutes=buffer_minutes)
+        
+        for appt in appointments:
+            existing_datetime = datetime.combine(appt.ngay_kham, appt.gio_kham)
+            time_diff = abs((existing_datetime - target_datetime).total_seconds())
+            
+            if time_diff < buffer_delta.total_seconds():
+                return True, appt.gio_kham.strftime('%H:%M')
+        
+        return False, None
+    
+    def get_daily_appointment_count(self, patient_id: int, appointment_date: date,
+                                   exclude_id: int = None) -> int:
+        """
+        Get count of patient appointments for a specific date.
+        
+        Args:
+            patient_id: Patient ID
+            appointment_date: Appointment date
+            exclude_id: Appointment ID to exclude from count
+            
+        Returns:
+            Number of appointments
+        """
+        queryset = self.get_all(
+            ma_benh_nhan_id=patient_id,
+            ngay_kham=appointment_date,
+            trang_thai__in=['Cho xac nhan', 'Da xac nhan']
+        )
+        
+        if exclude_id:
+            queryset = queryset.exclude(pk=exclude_id)
+            
+        return queryset.count()
+    
     def get_appointment_statistics(self, start_date: date = None, 
                                   end_date: date = None) -> Dict[str, Any]:
         """

@@ -332,10 +332,36 @@ class LichHenViewSet(viewsets.ModelViewSet):
             )
         elif isinstance(exc, IntegrityError):
             logger.error(f"Database integrity error in appointments API: {str(exc)}")
-            return Response(
-                {'error': 'Appointment conflict or data integrity violation'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            
+            # Parse specific constraint violations
+            error_message = str(exc).lower()
+            if 'unique_patient_appointment_time' in error_message:
+                return Response(
+                    {
+                        'error': 'Xung đột lịch hẹn',
+                        'details': 'Bệnh nhân đã có lịch hẹn vào thời gian này',
+                        'error_code': 'PATIENT_APPOINTMENT_CONFLICT'
+                    },
+                    status=status.HTTP_409_CONFLICT
+                )
+            elif 'unique_doctor_appointment_time' in error_message:
+                return Response(
+                    {
+                        'error': 'Xung đột lịch hẹn',
+                        'details': 'Bác sĩ đã có lịch hẹn vào thời gian này',
+                        'error_code': 'DOCTOR_APPOINTMENT_CONFLICT'
+                    },
+                    status=status.HTTP_409_CONFLICT
+                )
+            else:
+                return Response(
+                    {
+                        'error': 'Xung đột dữ liệu',
+                        'details': 'Vi phạm ràng buộc dữ liệu trong cơ sở dữ liệu',
+                        'error_code': 'DATA_INTEGRITY_VIOLATION'
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         return super().handle_exception(exc)
 
     def list(self, request, *args, **kwargs):

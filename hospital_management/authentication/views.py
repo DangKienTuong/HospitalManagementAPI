@@ -1,5 +1,5 @@
-from rest_framework import status, permissions
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework import status, permissions, viewsets
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
@@ -415,3 +415,170 @@ def check_permission(request):
         'trang_thai': user.trang_thai
     }
     return Response(permissions_data)
+
+
+class AuthViewSet(viewsets.ViewSet):
+    """
+    ViewSet for authentication-related operations
+    """
+    
+    @extend_schema(
+        operation_id='auth_login',
+        tags=['Authentication'],
+        summary='User login',
+        description='Authenticate user with phone number and password, returns JWT tokens',
+        request=CustomTokenObtainPairSerializer,
+        responses={
+            200: OpenApiResponse(
+                description='Login successful',
+                response={
+                    'type': 'object',
+                    'properties': {
+                        'access': {'type': 'string', 'description': 'JWT access token'},
+                        'refresh': {'type': 'string', 'description': 'JWT refresh token'},
+                        'user': {
+                            'type': 'object',
+                            'properties': {
+                                'ma_nguoi_dung': {'type': 'integer'},
+                                'so_dien_thoai': {'type': 'string'},
+                                'vai_tro': {'type': 'string'},
+                                'trang_thai': {'type': 'string'}
+                            }
+                        }
+                    }
+                }
+            ),
+            400: OpenApiResponse(description='Bad request - Invalid input data'),
+            401: OpenApiResponse(description='Unauthorized - Invalid credentials')
+        }
+    )
+    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
+    def login(self, request):
+        """Login endpoint"""
+        view = CustomTokenObtainPairView.as_view()
+        return view(request._request)
+    
+    @extend_schema(
+        operation_id='auth_refresh_token',
+        tags=['Authentication'],
+        summary='Refresh JWT token',
+        description='Get a new access token using refresh token',
+        request={
+            'type': 'object',
+            'properties': {
+                'refresh': {'type': 'string', 'description': 'Refresh token'}
+            },
+            'required': ['refresh']
+        },
+        responses={
+            200: OpenApiResponse(
+                description='Token refresh successful',
+                response={
+                    'type': 'object',
+                    'properties': {
+                        'access': {'type': 'string', 'description': 'New JWT access token'}
+                    }
+                }
+            ),
+            401: OpenApiResponse(description='Unauthorized - Invalid or expired refresh token')
+        }
+    )
+    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
+    def refresh(self, request):
+        """Refresh token endpoint"""
+        view = CustomTokenRefreshView.as_view()
+        return view(request._request)
+    
+    @extend_schema(
+        operation_id='auth_verify_token',
+        tags=['Authentication'],
+        summary='Verify JWT token',
+        description='Verify if a JWT token is valid',
+        request={
+            'type': 'object',
+            'properties': {
+                'token': {'type': 'string', 'description': 'JWT token to verify'}
+            },
+            'required': ['token']
+        },
+        responses={
+            200: OpenApiResponse(description='Token is valid'),
+            401: OpenApiResponse(description='Unauthorized - Invalid token')
+        }
+    )
+    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
+    def verify(self, request):
+        """Verify token endpoint"""
+        view = CustomTokenVerifyView.as_view()
+        return view(request._request)
+    
+    @extend_schema(
+        operation_id='auth_register',
+        tags=['Authentication'],
+        summary='User registration',
+        description='Register a new user account',
+        request=NguoiDungRegistrationSerializer,
+        responses={201: NguoiDungSerializer}
+    )
+    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
+    def register(self, request):
+        """Register endpoint"""
+        view = RegisterView.as_view()
+        return view(request._request)
+    
+    @extend_schema(
+        operation_id='auth_profile_get',
+        tags=['Authentication'],
+        summary='Get user profile',
+        description='Get current user profile information',
+        responses={200: NguoiDungSerializer}
+    )
+    @extend_schema(
+        operation_id='auth_profile_update',
+        tags=['Authentication'],
+        summary='Update user profile',
+        description='Update current user profile information',
+        request=NguoiDungSerializer,
+        responses={200: NguoiDungSerializer}
+    )
+    @action(detail=False, methods=['get', 'patch'], permission_classes=[permissions.IsAuthenticated])
+    def profile(self, request):
+        """Profile endpoint"""
+        view = ProfileView.as_view()
+        return view(request._request)
+    
+    @extend_schema(
+        operation_id='auth_change_password',
+        tags=['Authentication'],
+        summary='Change password',
+        description='Change user password',
+        request=ChangePasswordSerializer,
+        responses={200: {'type': 'object', 'properties': {'message': {'type': 'string'}}}}
+    )
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def change_password(self, request):
+        """Change password endpoint"""
+        view = ChangePasswordView.as_view()
+        return view(request._request)
+    
+    @extend_schema(
+        operation_id='auth_check_permissions',
+        tags=['Authentication'],
+        summary='Check user permissions',
+        description='Get current user role and permissions',
+        responses={200: {
+            'type': 'object',
+            'properties': {
+                'vai_tro': {'type': 'string'},
+                'is_admin': {'type': 'boolean'},
+                'is_doctor': {'type': 'boolean'},
+                'is_patient': {'type': 'boolean'},
+                'is_staff': {'type': 'boolean'},
+                'trang_thai': {'type': 'string'}
+            }
+        }}
+    )
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def permissions(self, request):
+        """Check permissions endpoint"""
+        return check_permission(request)

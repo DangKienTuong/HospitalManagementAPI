@@ -81,6 +81,20 @@ class LichHen(models.Model):
         db_table = 'Lich_hen'
         verbose_name = 'Lich hen'
         verbose_name_plural = 'Lich hen'
+        # Prevent duplicate appointments for same patient at same date/time
+        constraints = [
+            models.UniqueConstraint(
+                fields=['ma_benh_nhan', 'ngay_kham', 'gio_kham'],
+                condition=models.Q(trang_thai__in=['Cho xac nhan', 'Da xac nhan']),
+                name='unique_patient_appointment_time'
+            ),
+            # Prevent duplicate appointments for same doctor at same date/time  
+            models.UniqueConstraint(
+                fields=['ma_bac_si', 'ngay_kham', 'gio_kham'],
+                condition=models.Q(trang_thai__in=['Cho xac nhan', 'Da xac nhan']),
+                name='unique_doctor_appointment_time'
+            )
+        ]
     
     def __str__(self):
         return f"{self.ma_benh_nhan.ho_ten} - {self.ma_bac_si.ho_ten} - {self.ngay_kham}"

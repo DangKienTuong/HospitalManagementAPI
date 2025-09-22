@@ -1,9 +1,12 @@
 from rest_framework import serializers
 from django.utils import timezone
-from datetime import datetime, time
+from django.core.exceptions import ValidationError as DjangoValidationError
+from datetime import datetime, time, timedelta
 from .models import LichLamViec, LichHen, PhienTuVanTuXa
 from users.models import BenhNhan
 from medical.models import BacSi, DichVu
+from core.repositories.appointment_repository import AppointmentRepository
+from core.validators import AppointmentTimeValidator
 
 
 class LichLamViecSerializer(serializers.ModelSerializer):
@@ -72,14 +75,97 @@ class LichHenCreateSerializer(serializers.ModelSerializer):
         if lich_lam_viec.ma_bac_si != attrs['ma_bac_si']:
             raise serializers.ValidationError("Bác sĩ không khớp với lịch làm việc")
         
-        # Additional validation for Admin users
         user = self.context['request'].user
-        if user.vai_tro == 'Admin' and 'ma_benh_nhan' in attrs:
-            # Verify that the patient exists
+        
+        # Xác định bệnh nhân cho validation
+        if user.vai_tro == 'Admin':
+            if 'ma_benh_nhan' not in attrs:
+                raise serializers.ValidationError("Admin phải chỉ định bệnh nhân cho lịch hẹn")
+            benh_nhan = attrs['ma_benh_nhan']
             try:
-                BenhNhan.objects.get(pk=attrs['ma_benh_nhan'].pk)
+                BenhNhan.objects.get(pk=benh_nhan.pk)
             except (BenhNhan.DoesNotExist, AttributeError):
                 raise serializers.ValidationError("Bệnh nhân không tồn tại")
+        else:
+            try:
+                benh_nhan = BenhNhan.objects.get(ma_nguoi_dung=user)
+            except BenhNhan.DoesNotExist:
+                raise serializers.ValidationError("Không tìm thấy thông tin bệnh nhân")
+        
+        # ===== CONFLICT DETECTION VALIDATION =====
+        
+        # 1. Validate appointment time using business rules
+        appointment_datetime = timezone.make_aware(
+            datetime.combine(lich_lam_viec.ngay_lam_viec, lich_lam_viec.gio_bat_dau)
+        )
+        
+        try:
+            appointment_validator = AppointmentTimeValidator()
+            appointment_validator.validate(appointment_datetime)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(f"Thời gian đặt lịch không hợp lệ: {e.message}")
+        
+        # 2. Check if doctor has conflicting appointments (time slot availability)
+        appointment_repo = AppointmentRepository()
+        is_available = appointment_repo.check_time_slot_availability(
+            doctor_id=attrs['ma_bac_si'].pk,
+            appointment_date=lich_lam_viec.ngay_lam_viec,
+            appointment_time=lich_lam_viec.gio_bat_dau
+        )
+        
+        if not is_available:
+            raise serializers.ValidationError(
+                f"Bác sĩ {attrs['ma_bac_si'].ho_ten} đã có lịch hẹn vào thời gian này"
+            )
+        
+        # 3. Check if patient has conflicting appointments
+        patient_conflicts = LichHen.objects.filter(
+            ma_benh_nhan=benh_nhan,
+            ngay_kham=lich_lam_viec.ngay_lam_viec,
+            gio_kham=lich_lam_viec.gio_bat_dau,
+            trang_thai__in=['Cho xac nhan', 'Da xac nhan']
+        ).exists()
+        
+        if patient_conflicts:
+            raise serializers.ValidationError(
+                "Bệnh nhân đã có lịch hẹn vào thời gian này"
+            )
+        
+        # 4. Check if patient has another appointment within 30 minutes
+        time_buffer = timedelta(minutes=30)
+        appointment_start = appointment_datetime
+        appointment_end = appointment_start + time_buffer
+        
+        nearby_appointments = LichHen.objects.filter(
+            ma_benh_nhan=benh_nhan,
+            ngay_kham=lich_lam_viec.ngay_lam_viec,
+            trang_thai__in=['Cho xac nhan', 'Da xac nhan']
+        )
+        
+        for appt in nearby_appointments:
+            existing_datetime = timezone.make_aware(
+                datetime.combine(appt.ngay_kham, appt.gio_kham)
+            )
+            
+            # Check if appointments are too close to each other
+            time_diff = abs((existing_datetime - appointment_start).total_seconds())
+            if time_diff < time_buffer.total_seconds():
+                raise serializers.ValidationError(
+                    f"Bệnh nhân đã có lịch hẹn vào {appt.gio_kham.strftime('%H:%M')}. "
+                    f"Các lịch hẹn phải cách nhau ít nhất 30 phút."
+                )
+        
+        # 5. Additional validation: Check if patient has too many appointments per day
+        daily_appointments = LichHen.objects.filter(
+            ma_benh_nhan=benh_nhan,
+            ngay_kham=lich_lam_viec.ngay_lam_viec,
+            trang_thai__in=['Cho xac nhan', 'Da xac nhan']
+        ).count()
+        
+        if daily_appointments >= 3:  # Maximum 3 appointments per day
+            raise serializers.ValidationError(
+                "Bệnh nhân đã đạt giới hạn tối đa 3 lịch hẹn trong ngày"
+            )
         
         return attrs
     
