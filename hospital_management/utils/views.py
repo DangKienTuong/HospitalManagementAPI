@@ -23,7 +23,7 @@ except ImportError:
         operation_id='utils_export_patients',
         tags=['Utils'],
         summary='Export patients data',
-        description='Export patient data to Excel or CSV file'
+        description='Export patient data to Excel file'
     )
 )
 class ExportBenhNhanView(APIView):

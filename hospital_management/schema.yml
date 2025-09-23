@@ -2965,7 +2965,7 @@ paths:
   /api/utils/export/benh-nhan/:
     get:
       operationId: utils_export_patients
-      description: Export patient data to Excel or CSV file
+      description: Export patient data to Excel file
       summary: Export patients data
       tags:
       - Utils
